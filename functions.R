@@ -6,8 +6,9 @@
 # __________________________________ PACKAGES __________________________________
 # _____________________________________________________________________________
 {
-  pacotes_necessarios <- list("lubridate", "tidyverse", "httr", "jsonlite")
-  
+  pacotes_necessarios <- list("lubridate", "tidyverse", "httr",
+                              "jsonlite", "tsibble", "fable", "feasts")
+
   for (i in pacotes_necessarios) {
     eval(bquote(
       if (!require(.(i))) {
@@ -16,7 +17,7 @@
       }
     ))
   }
-  
+
   rm(pacotes_necessarios, i)
 }
 
@@ -24,12 +25,14 @@
 # __________________________________ FUNCTIONS __________________________________
 # _______________________________________________________________________________
 
-# fuction to download series from BACEN API
+# fuction to download time series from BACEN API
 get_sgs <- function(api_url){
   x <- GET(api_url)
   y <- fromJSON(rawToChar(x$content))
   y$data <- dmy(y$data)
   y$valor <- as.double(y$valor)
   colnames(y) <- c("data", "valor")
+  y <- as_tsibble(y, index = data, key = valor)
   return(y)
 }
+

@@ -14,33 +14,19 @@ source("functions.R")
 
 # get data
 
-dolar_compra <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados?formato=json")
-dolar_venda <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados?formato=json")
+dolar_compra <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.10813/dados?formato=json", "dolar_compra")
+dolar_venda <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados?formato=json", "dolar_venda")
 
 
+fit <- fabletools::model(filter(dolar_compra, data >= lubridate::ymd("2000/01/01")),
+                         arima = ARIMA(valor),
+                         ets = ETS(valor),
+                         theta = THETA(valor),
+                         RW = SNAIVE(valor)
+                         )
 
-snowy <- tourism %>%
-  filter(
-    Region == "Snowy Mountains",
-    Purpose == "Holiday"
-  )
-snowy
+fit %>% accuracy()
 
-fit <- snowy %>%
-  model(
-    #snaive = SNAIVE(Trips ~ lag("year")),
-    #ets = ETS(Trips),
-    arima = ARIMA(Trips)
-  )
-fit
-
-fc <- fit %>%
-  forecast(h = 12)
+fc <- fit %>% forecast(h = "30 days")
 fc
-
-fc %>%
-  autoplot(snowy) +
-  ggtitle("Forecasts for Snowy Mountains holidays") +
-  xlab("Year") +
-  guides(colour = guide_legend(title = "Forecast"))
-
+fc %>%  autoplot()

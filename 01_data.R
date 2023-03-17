@@ -1,4 +1,4 @@
-# TCC forecast
+# TCC forecast: get data and build panel
 # Bernardo Cainelli Gomes da Silva
 # Nov - 2022
 
@@ -6,7 +6,7 @@
 # _____________________________ HELPER FUNCTIONS __________________________________
 # _________________________________________________________________________________
 
-source("functions.R")
+source("00_functions.R")
 
 # _________________________________________________________________________________
 # __________________________________ DATA _________________________________________
@@ -27,37 +27,23 @@ pib_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.4380/dados?f
 
 # Daily data to monthly data: last value
 
-selic_mensal <- selic_diario %>%
-  mutate(mes = lubridate::floor_date(data, "month")) %>%
-  group_by(data) %>%
-  summarise(selic_mensal = last(selic_diario))
+selic_mensal <- day_to_month(selic_diario) %>% `colnames<-`(c("data", "selic_mensal")) ### TEM ALGO DE ERRADO. VERIFICAR ULTIMOS VALORES
 
-#####a <- day_to_month(selic_diario)
+# +n to inflation series to allow for log-diff
+
+#inflacao_mensal$inflacao_mensal <- inflacao_mensal$inflacao_mensal+1
 
 # Build panel
 
 painel <- reduce(list(dolar_compra_mensal, dolar_venda_mensal, M1_mensal,inflacao_mensal, selic_mensal, pib_mensal),full_join, by = "data")
 painel <- painel[rowSums(is.na(painel)) == 0,]
+rownames(painel) = seq(length=nrow(painel))
 #teste <- painel[painel$dolar_compra_mensal != painel$dolar_venda_mensal,] # Para averiguar se há diferença entre os valores de compra e venda do dólar.
 
-dolar_ts <- make_ts_month(dolar_compra_mensal)
-M1_ts <- make_ts_month(M1_mensal)
-inflacao_ts <- make_ts_month(inflacao_mensal)
-pib_ts <- make_ts_month(pib_mensal)
 
-a <- lm(data = log(painel[,-c(1,2)]), formula = dolar_venda_mensal  ~.)
+View(log(painel[,-1]))
 
 
-fit <- fabletools::model(filter(dolar_compra, data >= lubridate::ymd("2000/01/01")),
-                         arima = ARIMA(valor),
-                         ets = ETS(valor),
-                         theta = THETA(valor),
-                         RW = NAIVE(valor),
-                         RWs = SNAIVE(valor)
-                         )
+write_csv2(painel, "Painel de dados.csv")
 
-fit %>% accuracy()
-
-fc <- fit %>% forecast(h = "30 days")
-fc
-fc %>%  autoplot()
+rm(list=setdiff(ls(), "painel"))

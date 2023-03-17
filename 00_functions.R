@@ -54,6 +54,7 @@ day_to_month <- function(base){
   x <- base %>%
     mutate(mes = lubridate::floor_date(data, "month")) %>%
     group_by(mes) %>%
-    summarise(valor = last(enexpr(nome_coluna)))
+    summarise(valor = last(!! rlang::ensym(nome_coluna)))
+  #colnames(x) <- c("data", "valor")
   return(x)
 }

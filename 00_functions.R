@@ -7,7 +7,7 @@
 # _____________________________________________________________________________
 {
   pacotes_necessarios <- list("lubridate", "tidyverse", "httr",
-                              "jsonlite", "tsibble", "fable", "feasts")
+                              "jsonlite", "tsibble", "fable", "feasts", "sidrar")
 
   for (i in pacotes_necessarios) {
     eval(bquote(

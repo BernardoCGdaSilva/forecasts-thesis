@@ -21,7 +21,8 @@ dolar_venda_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.3695
 #M1_diario <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.27785/dados?formato=json","M1_diario")#, "base_monetaria_m1")
 M1_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.27791/dados?formato=json", "M1_mensal")
 #M1_defasado_diario <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.1821/dados?formato=json", "base_monetaria_m1")
-inflacao_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json", "inflacao_mensal")#, "ipca")
+#inflacao_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json", "inflacao_mensal")#, "ipca")
+inflacao_mensal <- get_sidra(x = 1737, variable = 2266, period = "all", geo = "Brazil")
 selic_diario <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados?formato=json", "selic_diario")
 pib_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.4380/dados?formato=json", "pib_mensal")
 
@@ -29,9 +30,10 @@ pib_mensal <- get_sgs("http://api.bcb.gov.br/dados/serie/bcdata.sgs.4380/dados?f
 
 selic_mensal <- day_to_month(selic_diario) %>% `colnames<-`(c("data", "selic_mensal")) ### TEM ALGO DE ERRADO. VERIFICAR ULTIMOS VALORES
 
-# +n to inflation series to allow for log-diff
+# Tidy inflation data
 
-#inflacao_mensal$inflacao_mensal <- inflacao_mensal$inflacao_mensal+1
+inflacao_mensal <- inflacao_mensal %>% mutate(data = ym(`Mês (Código)`)) %>% select(data, Valor)
+colnames(inflacao_mensal) <- c("data","inflacao_mensal")
 
 # Build panel
 
@@ -41,7 +43,7 @@ rownames(painel) = seq(length=nrow(painel))
 #teste <- painel[painel$dolar_compra_mensal != painel$dolar_venda_mensal,] # Para averiguar se há diferença entre os valores de compra e venda do dólar.
 
 
-View(log(painel[,-1]))
+#View(log(painel[,-1]))
 
 
 write_csv2(painel, "Painel de dados.csv")

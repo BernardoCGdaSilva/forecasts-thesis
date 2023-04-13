@@ -15,18 +15,20 @@ library(doParallel)
 # _____________________________ PREPROCESS DATA ___________________________________
 # _________________________________________________________________________________
 
+# First difference
+data_diff <- painel[, -c(1:2)]
+data_diff <- diff(as.matrix(log(data_diff)))
+rownames(data_diff) = seq(length=nrow(data_diff))
 
-data <- painel[, -c(1:2)]
+formula_diff_lin <- as.formula(paste0("dolar_venda_mensal ~ ."))
+formula_diff_nlin <- as.formula(paste0("dolar_venda_mensal ~ (.)^2 +",
+                                       "I(M1_mensal^2) + I(inflacao_mensal^2) +",
+                                       "I(selic_mensal^2) + I(pib_mensal^2)"))
 
-# +n to inflation series to allow for log-diff
+#model.frame(formula_diff_nlin, data = painel)
+#terms(formula_diff_nlin)
 
-# data$inflacao_mensal <- data$inflacao_mensal+1
-# data <- diff(as.matrix(log(data)))
-
-# sample <- createTimeSlices(y = as.matrix(data), initialWindow = 120, horizon = 12, fixedWindow = TRUE)
-
-# data_train <- data[sample$train[[1]],]
-# data_test <- data[sample$test[[1]],]
+# Error Correction
 
 
 # _________________________________________________________________________________
@@ -65,41 +67,57 @@ tuneLength.num <- 15 # para o ajuste de parâmetros, peço para o modelo testar 
 
 
 
-model_lm <- train(dolar_venda_mensal ~ .,
-  data = data,
+model_lm <- train(formula_diff_nlin,
+  data = data_diff,
   method = "lm",
   trControl = myTimeControl,
   tuneLength = tuneLength.num,
   metric = "RMSE"
 )
-# lm.mod
-# lm.mod$finalModel
-# lm.mod$results
-# lm.mod$control$index
+#model_lm
+#model_lm$finalModel
+#model_lm$results
+#model_lm$control$index
 
-model_svm <- train(dolar_venda_mensal ~ .,
-  data = data,
+model_svm_r <- train(formula_diff_nlin,
+  data = data_diff,
   method = "svmRadial",
   trControl = myTimeControl,
   tuneLength = tuneLength.num,
   metric = "RMSE"
 )
 
+model_svm_l <- train(formula_diff_nlin,
+                   data = data_diff,
+                   method = "svmLinear",
+                   trControl = myTimeControl,
+                   tuneLength = tuneLength.num,
+                   metric = "RMSE"
+)
+
+#model_svm_p <- train(dolar_venda_mensal ~ .,
+#                     data = data_diff,
+#                     method = "svmPoly",
+#                     trControl = myTimeControl,
+#                     tuneLength = tuneLength.num,
+#                     metric = "RMSE"
+#)
+
 # svm.mod
 # svm.mod$finalModel
 # svm.mod$results
 # svm.mod$control$index
 
-model_rf <- train(dolar_venda_mensal ~ .,
-  data = data,
+model_rf <- train(formula_diff_nlin,
+  data = data_diff,
   method = "ctree",
   tuneLength = tuneLength.num,
   trControl = myTimeControl,
   metric = "RMSE"
 )
 
-model_MARS <- train(dolar_venda_mensal ~ .,
-  data = data,
+model_MARS <- train(formula_diff_nlin,
+  data = data_diff,
   method = "earth",
   tuneGrid = expand.grid(
     .degree = 1, # Preciso entender o que são esses dois parâmetros e porque eles não podem ser estimados com CV
@@ -108,12 +126,33 @@ model_MARS <- train(dolar_venda_mensal ~ .,
   trControl = myTimeControl
 )
 
+model_lasso <- train(formula_diff_nlin,
+                  data = data_diff,
+                  method = "lasso",
+                  tuneLength = tuneLength.num,
+                  trControl = myTimeControl,
+                  metric = "RMSE"
+)
+#predictors(model_lasso)
+
+model_ridge <- train(formula_diff_nlin,
+                     data = data_diff,
+                     method = "ridge",
+                     tuneLength = tuneLength.num,
+                     trControl = myTimeControl,
+                     metric = "RMSE"
+)
+
 
 modelos <- resamples(list(
   "Linear Regression" = model_lm,
-  "Support Vector Machine" = model_svm,
+  "Support Vector Machine Kernel Radial" = model_svm_r,
+  "Support Vector Machine Kernel Linear" = model_svm_l,
+  #"Support Vector Machine Kernel Polinomial" = model_svm_p,
   "Random Forest" = model_rf,
-  "Splines adaptativos" = model_MARS
+  "Adaptative Splines" = model_MARS,
+  "Lasso" = model_lasso,
+  "Ridge Regression" = model_ridge
 ))
 parallelplot(modelos, metric = "RMSE")
 summary(modelos)
@@ -121,5 +160,5 @@ summary(modelos)
 trellis.par.set(caretTheme())
 dotplot(modelos, metric = "RMSE")
 
-Prev_lm <- predict(model_lm, tail(data, 1))
-Prev_lm
+#Prev_lm <- predict(model_lm, tail(data_diff, 1))
+#Prev_lm

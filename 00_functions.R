@@ -7,7 +7,9 @@
 # _____________________________________________________________________________
 {
   pacotes_necessarios <- list("lubridate", "tidyverse", "httr",
-                              "jsonlite", "tsibble", "fable", "feasts", "sidrar")
+                              "jsonlite", "tsibble", "fable", "feasts", "sidrar",
+                              "ipeadatar", "neverhpfilter", "caret", "doParallel",
+                              "fredr", "tempdisagg")
 
   for (i in pacotes_necessarios) {
     eval(bquote(
@@ -31,7 +33,7 @@ get_sgs <- function(api_url, nome_coluna){#,nome_variavel){
   y <- jsonlite::fromJSON(rawToChar(x$content))
   y$data <- lubridate::dmy(y$data)
   y$valor <- as.double(y$valor)
-  colnames(y) <- c("data", nome_coluna)
+  colnames(y) <- c("date", nome_coluna)
   #y <- mutate(y, variavel = nome_variavel)
   #z <- tsibble::as_tsibble(y, index = data, key = variavel)
   #z <- arrange(z, data)
@@ -52,7 +54,7 @@ make_ts_month <- function(base){
 day_to_month <- function(base){
   nome_coluna <- colnames(base)[2]
   x <- base %>%
-    mutate(mes = lubridate::floor_date(data, "month")) %>%
+    dplyr::mutate(mes = lubridate::floor_date(date, "month")) %>%
     group_by(mes) %>%
     summarise(valor = last(!! rlang::ensym(nome_coluna)))
   #colnames(x) <- c("data", "valor")

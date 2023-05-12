@@ -8,8 +8,6 @@
 
 source("00_functions.R")
 source("01_data.R")
-library(caret)
-library(doParallel)
 
 # _________________________________________________________________________________
 # _____________________________ PREPROCESS DATA ___________________________________
@@ -23,7 +21,7 @@ rownames(data_diff) = seq(length=nrow(data_diff))
 formula_diff_lin <- as.formula(paste0("dolar_venda_mensal ~ ."))
 formula_diff_nlin <- as.formula(paste0("dolar_venda_mensal ~ (.)^2 +",
                                        "I(M1_mensal^2) + I(inflacao_mensal^2) +",
-                                       "I(selic_mensal^2) + I(pib_mensal^2)"))
+                                       "I(selic_mensal^2) + I(pib_mensal^2) + I(hiato^2)"))
 
 #model.frame(formula_diff_nlin, data = painel)
 #terms(formula_diff_nlin)
@@ -38,11 +36,11 @@ formula_diff_nlin <- as.formula(paste0("dolar_venda_mensal ~ (.)^2 +",
 #### creating sampling seeds ####
 # Preciso utilizar o argumento seeds de trainControl para garantir reprodutibilidade utilizando computação paralela.
 set.seed(123)
-seeds <- vector(mode = "list", length = 124)
-for (i in 1:123) seeds[[i]] <- sample.int(1000, 15)
+seeds <- vector(mode = "list", length = 125)
+for (i in 1:124) seeds[[i]] <- sample.int(1000, 15)
 
 ## For the last model:
-seeds[[124]] <- sample.int(1000, 1)
+seeds[[125]] <- sample.int(1000, 1)
 
 
 

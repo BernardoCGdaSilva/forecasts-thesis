@@ -51,8 +51,8 @@ us_gdp_monthly <- data.frame(date=as.Date(time(us_gdp_monthly_fit)), us_gdp=as.m
 #test
 ggplot() +
   geom_line(data = us_gdp_monthly, mapping = aes (x = date, y = us_gdp))+
-  geom_line(data = data.frame(date=as.Date(time(us_gdp)), us_gdp=as.matrix(us_gdp)), mapping = aes (x = date, y = us_gdp)) #+
-  #tidyquant::coord_x_date(xlim = c("2016-01-01", "2023-05-11"))
+  geom_line(data = data.frame(date=as.Date(time(us_gdp)), us_gdp=as.matrix(us_gdp)), mapping = aes (x = date, y = us_gdp)) +
+  tidyquant::coord_x_date(xlim = c("2016-01-01", "2023-05-11"))
 
 tail(data.frame(date=as.Date(time(us_gdp)), usa_gdp=as.matrix(us_gdp)))
 tail(us_gdp_monthly)

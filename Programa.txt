@@ -18,3 +18,10 @@ Taxa de juros EUA - check
 M1 br - check
 M1 EUA - check
 
+
+Cambio com o outro país
+Inflação
+PIB
+Juros
+M1
+

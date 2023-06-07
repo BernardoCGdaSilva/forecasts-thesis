@@ -108,6 +108,6 @@ rownames(data_panel) <- seq(length = nrow(data_panel))
 # real exchange rate
 # diffs
 
-write_csv2(data_panel, "Painel de dados.csv")
+write_csv2(data_panel, "outputs/Painel de dados.csv")
 
 rm(list = setdiff(ls(), "data_panel"))

@@ -8,6 +8,7 @@
 
 source("00_functions.R")
 #source("01_data.R")
+data_panel <- readr::read_csv2("outputs/Painel de dados.csv")
 
 # _________________________________________________________________________________
 # _____________________________ PREPROCESS DATA ___________________________________
@@ -39,9 +40,9 @@ formula_international_diff <- as.formula(paste0("br_exchange ~ I(br_inflation - 
 data_model_training <- as.data.frame(data_diff)
 formula_model_training <- formula_diff_nlin
 
-# _________________________________________________________________________________
-# __________________________________ MODEL _________________________________________
-# _________________________________________________________________________________
+# ___________________________________________________________________________________
+# __________________________________ MODELS _________________________________________
+# ___________________________________________________________________________________
 
 #### creating sampling seeds ####
 # Preciso utilizar o argumento seeds de trainControl para garantir reprodutibilidade utilizando computação paralela.
@@ -135,7 +136,7 @@ model_rf <- train(formula_model_training,
 #model_rf$results
 #model_rf$pred %>% filter(mincriterion == 0.64) %>% str
 
-model_MARS <- train(formula_model_training,
+model_mars <- train(formula_model_training,
   data = data_model_training,
   method = "earth",
   tuneGrid = expand.grid(
@@ -163,17 +164,18 @@ model_ridge <- train(formula_model_training,
 )
 
 
-modelos <- resamples(list(
+model_list <- list(
   "Linear Regression" = model_lm,
   "Support Vector Machine Kernel Radial" = model_svm_r,
   "Support Vector Machine Kernel Linear" = model_svm_l,
   #"Support Vector Machine Kernel Polinomial" = model_svm_p,
   "Tree" = model_tree,
   "Random Forest" = model_rf,
-  "Adaptative Splines" = model_MARS,
+  "Adaptative Splines" = model_mars,
   "Lasso" = model_lasso,
   "Ridge Regression" = model_ridge
-))
+)
+modelos <- resamples(model_list)
 parallelplot(modelos, metric = "RMSE")
 summary(modelos)
 
@@ -185,3 +187,12 @@ dotplot(modelos, metric = "RMSE")
 
 #Prev_lm <- predict(model_lm, tail(data_diff, 1))
 #Prev_lm
+
+
+# ___________________________________________________________________________________
+# ____________________________________ SAVE _________________________________________
+# ___________________________________________________________________________________
+
+for (i in model_list) {
+  saveRDS(i, paste0("outputs/model_",i[[1]],".rds"))
+}

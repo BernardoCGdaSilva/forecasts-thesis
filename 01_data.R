@@ -6,7 +6,7 @@
 # _______________________________ HELPER FUNCTIONS ____________________________
 # _____________________________________________________________________________
 source("00_functions.R")
-fredr_set_key("97f79f87ad234e695b64f0cc576fb23f")
+fredr_set_key(pull(read_csv("fred_key.txt", col_names = F)))
 
 # View(imf_databases())
 # View(imf_parameters(database_id = "MFS"))
@@ -29,6 +29,37 @@ ru_exchange <- filter_ifs(nominal_exchange, filter = "RU", colname = "ru_exchang
 in_exchange <- filter_ifs(nominal_exchange, filter = "IN", colname = "in_exchange")
 cn_exchange <- filter_ifs(nominal_exchange, filter = "CN", colname = "cn_exchange")
 za_exchange <- filter_ifs(nominal_exchange, filter = "ZA", colname = "za_exchange")
+
+br_exchange_rate <- br_exchange %>%
+  mutate(
+    br_exchange_rate_h1 = br_exchange / lag(br_exchange, 1) - 1,
+    br_exchange_rate_h12 = br_exchange / lag(br_exchange, 12) - 1
+  ) %>%
+  select(-br_exchange)
+ru_exchange_rate <- ru_exchange %>%
+  mutate(
+    ru_exchange_rate_h1 = ru_exchange / lag(ru_exchange, 1) - 1,
+    ru_exchange_rate_h12 = ru_exchange / lag(ru_exchange, 12) - 1
+  ) %>%
+  select(-ru_exchange)
+in_exchange_rate <- in_exchange %>%
+  mutate(
+    in_exchange_rate_h1 = in_exchange / lag(in_exchange, 1) - 1,
+    in_exchange_rate_h12 = in_exchange / lag(in_exchange, 12) - 1
+  ) %>%
+  select(-in_exchange)
+cn_exchange_rate <- cn_exchange %>%
+  mutate(
+    cn_exchange_rate_h1 = cn_exchange / lag(cn_exchange, 1) - 1,
+    cn_exchange_rate_h12 = cn_exchange / lag(cn_exchange, 12) - 1
+  ) %>%
+  select(-cn_exchange)
+za_exchange_rate <- za_exchange %>%
+  mutate(
+    za_exchange_rate_h1 = za_exchange / lag(za_exchange, 1) - 1,
+    za_exchange_rate_h12 = za_exchange / lag(za_exchange, 12) - 1
+  ) %>%
+  select(-za_exchange)
 
 # interest rate, NSA
 # br_interest <- fredr(series_id = "BRALOCOSTORSTM") %>% select(1, 3) # selic
@@ -62,6 +93,25 @@ in_inflation <- filter_ifs(inflation, filter = "IN", colname = "in_inflation")
 cn_inflation <- filter_ifs(inflation, filter = "CN", colname = "cn_inflation")
 za_inflation <- filter_ifs(inflation, filter = "ZA", colname = "za_inflation")
 us_inflation <- filter_ifs(inflation, filter = "US", colname = "us_inflation")
+
+br_inflation_rate <- br_inflation %>%
+  mutate(br_inflation_rate = (br_inflation / lag(br_inflation)) - 1) %>%
+  select(-br_inflation)
+ru_inflation_rate <- ru_inflation %>%
+  mutate(ru_inflation_rate = (ru_inflation / lag(ru_inflation)) - 1) %>%
+  select(-ru_inflation)
+in_inflation_rate <- in_inflation %>%
+  mutate(in_inflation_rate = (in_inflation / lag(in_inflation)) - 1) %>%
+  select(-in_inflation)
+cn_inflation_rate <- cn_inflation %>%
+  mutate(cn_inflation_rate = (cn_inflation / lag(cn_inflation)) - 1) %>%
+  select(-cn_inflation)
+za_inflation_rate <- za_inflation %>%
+  mutate(za_inflation_rate = (za_inflation / lag(za_inflation)) - 1) %>%
+  select(-za_inflation)
+us_inflation_rate <- us_inflation %>%
+  mutate(us_inflation_rate = (us_inflation / lag(us_inflation)) - 1) %>%
+  select(-us_inflation)
 
 # M1, NSA
 br_m1 <- fredr(series_id = "MANMM101BRM189N") %>% select(1, 3)
@@ -198,12 +248,12 @@ colnames(us_gdp) <- c("date", "us_gdp")
 # All the data
 panel_data <- reduce(
   list(
-    br_exchange, br_gap, br_gdp, br_inflation, br_interest, br_m1,
-    ru_exchange, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1,
-    in_exchange, in_gap, in_gdp, in_inflation, in_interest, in_m1,
-    cn_exchange, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1,
-    za_exchange, za_gap, za_gdp, za_inflation, za_interest, za_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    br_exchange, br_exchange_rate, br_gap, br_gdp, br_inflation, br_interest, br_m1, br_inflation_rate,
+    ru_exchange, ru_exchange_rate, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1, ru_inflation_rate,
+    in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_interest, in_m1, in_inflation_rate,
+    cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1, cn_inflation_rate,
+    za_exchange, za_exchange_rate, za_gap, za_gdp, za_inflation, za_interest, za_m1, za_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -214,8 +264,8 @@ rownames(panel_data) <- seq(length = nrow(panel_data))
 # Brazilian data
 br_panel_data <- reduce(
   list(
-    br_exchange, br_gap, br_gdp, br_inflation, br_interest, br_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    br_exchange, br_exchange_rate, br_gap, br_gdp, br_inflation, br_interest, br_m1, br_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -226,8 +276,8 @@ rownames(br_panel_data) <- seq(length = nrow(br_panel_data))
 # Russian data
 ru_panel_data <- reduce(
   list(
-    ru_exchange, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    ru_exchange, ru_exchange_rate, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1, ru_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -238,8 +288,8 @@ rownames(ru_panel_data) <- seq(length = nrow(ru_panel_data))
 # Indian data
 in_panel_data <- reduce(
   list(
-    in_exchange, in_gap, in_gdp, in_inflation, in_interest, in_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_interest, in_m1, in_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -250,8 +300,8 @@ rownames(in_panel_data) <- seq(length = nrow(in_panel_data))
 # Chinese data
 cn_panel_data <- reduce(
   list(
-    cn_exchange, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1, cn_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -262,8 +312,8 @@ rownames(cn_panel_data) <- seq(length = nrow(cn_panel_data))
 # South african data
 za_panel_data <- reduce(
   list(
-    za_exchange, za_gap, za_gdp, za_inflation, za_interest, za_m1,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1
+    za_exchange, za_exchange_rate,za_gap, za_gdp, za_inflation, za_interest, za_m1, za_inflation_rate,
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
   ),
   full_join,
   by = "date"
@@ -274,7 +324,8 @@ rownames(za_panel_data) <- seq(length = nrow(za_panel_data))
 # Export
 write_csv2(panel_data, "outputs/panel_data.csv")
 write_csv2(br_panel_data, "outputs/br_panel_data.csv")
-write_csv2(ru_panel_data, "outputs/ru_panel_datas.csv")
+write_csv2(ru_panel_data, "outputs/ru_panel_data.csv")
 write_csv2(in_panel_data, "outputs/in_panel_data.csv")
 write_csv2(cn_panel_data, "outputs/cn_panel_data.csv")
 write_csv2(za_panel_data, "outputs/za_panel_data.csv")
+

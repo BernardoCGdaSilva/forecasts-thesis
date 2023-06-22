@@ -7,192 +7,185 @@
 # _________________________________________________________________________________
 
 source("00_functions.R")
-#source("01_data.R")
-data_panel <- readr::read_csv2("outputs/Painel de dados.csv")
+# source("01_data.R")
 
-# _________________________________________________________________________________
-# _____________________________ PREPROCESS DATA ___________________________________
-# _________________________________________________________________________________
+country_list <- c("br", "ru", "in", "cn", "za")
+#country_list <- c("br")
 
-# First difference
-data_diff <- data_panel[, -1]
-data_diff <- diff(as.matrix(log(data_diff)))
-rownames(data_diff) = seq(length=nrow(data_diff))
+output_models <- list()
 
-formula_diff_lin <- as.formula(paste0("br_exchange ~ ."))
-formula_diff_nlin <- as.formula(paste0("br_exchange ~ (.)^2 +",
-                                       "I(br_inflation^2) + I(us_inflation^2) +",
-                                       "I(br_gdp^2) + I(us_gdp^2) + I(br_interest^2) +",
-                                       "I(us_interest^2) + I(br_m1^2) + I(us_m1^2) +",
-                                       "I(br_gap^2) + I(us_gap^2)"))
-formula_international_diff <- as.formula(paste0("br_exchange ~ I(br_inflation - us_inflation) + ",
-                                                "I(br_gdp - us_gdp) +",
-                                                "I(br_interest - us_interest) + ",
-                                                "I(br_m1 - us_m1) + I(br_gap - us_gap)"))
+for (cty in country_list) {
+  print(cty)
 
-#model.frame(formula_international_diff, data = data_panel)
-#terms(formula_international_diff)
+  # get data
+  data <- read_csv2(paste0("outputs/", cty, "_panel_data.csv"), col_types = "Dddddddddddd") %>% arrange(date)
 
-# Error Correction
+  # Set seeds for reproducibility
+  set.seed(123)
+  seed_lenght <- nrow(data) - 120
+  seeds <- vector(mode = "list", length = nrow(data) - 120)
+  for (i in 1:seed_lenght) seeds[[i]] <- sample.int(1000, 1)
+  seeds[[seed_lenght + 1]] <- sample.int(1000, 1)
 
+  # set number o cores for parallel processing
+  registerDoParallel(cores = 4)
 
+  # set the number of alternativa to metaparameters
+  n_tuneLength <- 15
 
-data_model_training <- as.data.frame(data_diff)
-formula_model_training <- formula_diff_nlin
-
-# ___________________________________________________________________________________
-# __________________________________ MODELS _________________________________________
-# ___________________________________________________________________________________
-
-#### creating sampling seeds ####
-# Preciso utilizar o argumento seeds de trainControl para garantir reprodutibilidade utilizando computação paralela.
-set.seed(123)
-seeds <- vector(mode = "list", length = 126)
-for (i in 1:125) seeds[[i]] <- sample.int(1000, 15)
-
-## For the last model:
-seeds[[126]] <- sample.int(1000, 1)
+  for (wdw in c("rolling", "expanding")) {
+    print(wdw)
 
 
+      # set estimation window
+      windown <- (wdw == "rolling")
 
+      # Adjustments for cross validation
+      cv_control <- trainControl(
+        method = "timeslice",
+        initialWindow = 120,
+        horizon = 1,
+        fixedWindow = windown,
+        allowParallel = TRUE,
+        savePredictions = TRUE,
+        seeds = seeds,
+        returnResamp = "all"
+      )
 
-registerDoParallel(cores = 4) # número de núcleos de processamento
+      for (hzn in c("h1", "h12")) {
+        print(hzn)
 
+      # set train formula
+      {
+        # taylor
+        form_taylor <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
+          "_gap - us_gap) + I(log(", cty, "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
+        )
+        # taylor ppp
+        form_taylor_ppp <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty, "_gap - us_gap)"
+        )
+        # taylor ppp smoothing
+        form_taylor_ppp_smoothing <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
+          "_gap - us_gap) + I(", cty, "_interest - us_interest)"
+        )
+        # taylor smoothing
+        form_taylor_smoothing <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
+          "_gap - us_gap) + I(", cty, "_interest - us_interest) + I(log(", cty,
+          "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
+        )
+        # ppp
+        form_ppp <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(log(", cty, "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
+        )
+        # monetary
+        form_monetary <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(log(", cty, "_exchange) -((", cty, "_m1 - us_m1)-(", cty, "_gdp - us_gdp)))"
+        )
+        # foward premium model
+        form_foward_premium <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_interest - us_interest)"
+        )
+      }
 
+      formula_list <- list(
+        "form_taylor", "form_taylor_ppp", "form_taylor_ppp_smoothing",
+        "form_taylor_smoothing", "form_ppp", "form_monetary", "form_foward_premium"
+      )
 
-# Ajustes da validação cruzada
-myTimeControl <- trainControl(
-  method = "timeslice",
-  initialWindow = 120,
-  horizon = 12,
-  fixedWindow = T,
-  allowParallel = TRUE,
-  savePredictions = TRUE,
-  seeds = seeds, # seeds para garantir reprodutibilidade
-  returnResamp = "all"
-) # Este argumento armazena as samples da validação cruzada
+      for (form in formula_list) {
+        print(form)
 
-tuneLength.num <- 15 # para o ajuste de parâmetros, peço para o modelo testar quinze alternativas para cada parâmetro.
+        train_formula <- as.formula(get(form))
 
+        # View(model.matrix(data = data, as.formula(train_formula)))
+        # View(model.frame(data = data, as.formula(train_formula)))
 
+        print("lm")
+        model_lm <- train(train_formula,
+          data = data,
+          method = "lm",
+          trControl = cv_control,
+          tuneLength = n_tuneLength,
+          metric = "RMSE"
+        )
 
-model_lm <- train(formula_model_training,
-  data = data_model_training,
-  method = "lm",
-  trControl = myTimeControl,
-  tuneLength = tuneLength.num,
-  metric = "RMSE"
-)
-model_lm
-model_lm$finalModel
-model_lm$results
-model_lm$control$index
-model_lm$control$indexOut
+        # print("ridge")
+        # model_ridge <- train(train_formula,
+        #  data = data,
+        #  method = "ridge",
+        #  tuneLength = n_tuneLength,
+        #  trControl = cv_control,
+        #  metric = "RMSE"
+        # )
 
-model_svm_r <- train(formula_model_training,
-  data = data_model_training,
-  method = "svmRadial",
-  trControl = myTimeControl,
-  tuneLength = tuneLength.num,
-  metric = "RMSE"
-)
+        # print("lasso")
+        # model_lasso <- train(train_formula,
+        #  data = data,
+        #  method = "lasso",
+        #  tuneLength = n_tuneLength,
+        #  trControl = cv_control,
+        #  metric = "RMSE"
+        # )
 
-model_svm_l <- train(formula_model_training,
-                   data = data_model_training,
-                   method = "svmLinear",
-                   trControl = myTimeControl,
-                   tuneLength = tuneLength.num,
-                   metric = "RMSE"
-)
+        print("svm_r")
+        model_svm_r <- train(train_formula,
+          data = data,
+          method = "svmRadial",
+          trControl = cv_control,
+          tuneLength = n_tuneLength,
+          metric = "RMSE"
+        )
 
-#model_svm_p <- train(dolar_venda_mensal ~ .,
-#                     data = data_diff,
-#                     method = "svmPoly",
-#                     trControl = myTimeControl,
-#                     tuneLength = tuneLength.num,
-#                     metric = "RMSE"
-#)
+        print("svm_l")
+        model_svm_l <- train(train_formula,
+          data = data,
+          method = "svmLinear",
+          trControl = cv_control,
+          tuneLength = n_tuneLength,
+          metric = "RMSE"
+        )
 
-# svm.mod
-# svm.mod$finalModel
-# svm.mod$results
-# svm.mod$control$index
+        print("tree")
+        model_tree <- train(train_formula,
+          data = data,
+          method = "ctree",
+          tuneLength = n_tuneLength,
+          trControl = cv_control,
+          metric = "RMSE"
+        )
 
-model_tree <- train(formula_model_training,
-  data = data_model_training,
-  method = "ctree",
-  tuneLength = tuneLength.num,
-  trControl = myTimeControl,
-  metric = "RMSE"
-)
+        print("mars")
+        model_mars <- train(train_formula,
+          data = data,
+          method = "earth",
+          tuneGrid = expand.grid(
+            .degree = 1, # Preciso entender o que são esses dois parâmetros e porque eles não podem ser estimados com CV
+            .nprune = 2:25
+          ),
+          trControl = cv_control
+        )
 
-model_rf <- train(formula_model_training,
-                    data = data_model_training,
-                    method = "rf",
-                    tuneLength = tuneLength.num,
-                    trControl = myTimeControl,
-                    metric = "RMSE"
-)
-#model_rf$results
-#model_rf$pred %>% filter(mincriterion == 0.64) %>% str
+        # model_rf <- train(train_formula,
+        # data = data,
+        # method = "rf",
+        # tuneLength = n_tuneLength,
+        # trControl = cv_control,
+        # metric = "RMSE"
+        # )
 
-model_mars <- train(formula_model_training,
-  data = data_model_training,
-  method = "earth",
-  tuneGrid = expand.grid(
-    .degree = 1, # Preciso entender o que são esses dois parâmetros e porque eles não podem ser estimados com CV
-    .nprune = 2:25
-  ),
-  trControl = myTimeControl
-)
-
-model_lasso <- train(formula_model_training,
-                  data = data_model_training,
-                  method = "lasso",
-                  tuneLength = tuneLength.num,
-                  trControl = myTimeControl,
-                  metric = "RMSE"
-)
-#predictors(model_lasso)
-
-model_ridge <- train(formula_model_training,
-                     data = data_model_training,
-                     method = "ridge",
-                     tuneLength = tuneLength.num,
-                     trControl = myTimeControl,
-                     metric = "RMSE"
-)
-
-
-model_list <- list(
-  "Linear Regression" = model_lm,
-  "Support Vector Machine Kernel Radial" = model_svm_r,
-  "Support Vector Machine Kernel Linear" = model_svm_l,
-  #"Support Vector Machine Kernel Polinomial" = model_svm_p,
-  "Tree" = model_tree,
-  "Random Forest" = model_rf,
-  "Adaptative Splines" = model_mars,
-  "Lasso" = model_lasso,
-  "Ridge Regression" = model_ridge
-)
-modelos <- resamples(model_list)
-parallelplot(modelos, metric = "RMSE")
-summary(modelos)
-
-trellis.par.set(caretTheme())
-dotplot(modelos, metric = "RMSE")
-
-
-#plot(varImp(model_svm_r))
-
-#Prev_lm <- predict(model_lm, tail(data_diff, 1))
-#Prev_lm
-
-
-# ___________________________________________________________________________________
-# ____________________________________ SAVE _________________________________________
-# ___________________________________________________________________________________
-
-for (i in model_list) {
-  saveRDS(i, paste0("outputs/model_",i[[1]],".rds"))
+        loop <- paste0(cty, "_", wdw, "_", hzn, "_", form)
+        output_models[[loop]] <- list(
+          "lm" = model_lm, "ridge" = model_ridge, "lasso" = model_lasso, "svm_r" = model_svm_r,
+          "svm_l" = model_svm_l, "ctree" = model_tree, "mars" = model_mars
+        )
+      }
+    }
+  }
 }
+
+# export trained models
+saveRDS(output_models, "outputs/output_models.rds")

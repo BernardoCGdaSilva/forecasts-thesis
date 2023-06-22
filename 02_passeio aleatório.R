@@ -1,5 +1,6 @@
 source("00_functions.R")
-source("01_data.R")
+#source("01_data.R")
+data_panel <- readr::read_csv2("outputs/Painel de dados.csv")
 
 rw_h1 <- data_panel[1:2] %>%
   mutate(

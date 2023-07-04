@@ -10,7 +10,7 @@ source("00_functions.R")
 # source("01_data.R")
 
 country_list <- c("br", "ru", "in", "cn", "za")
-#country_list <- c("br")
+# country_list <- c("br")
 
 output_models <- list()
 
@@ -23,8 +23,8 @@ for (cty in country_list) {
   # Set seeds for reproducibility
   set.seed(123)
   seed_lenght <- nrow(data) - 120
-  seeds <- vector(mode = "list", length = nrow(data) - 120)
-  for (i in 1:seed_lenght) seeds[[i]] <- sample.int(1000, 1)
+  seeds <- vector(mode = "list", length = seed_lenght)
+  for (i in 1:seed_lenght) seeds[[i]] <- sample.int(1000, 15)
   seeds[[seed_lenght + 1]] <- sample.int(1000, 1)
 
   # set number o cores for parallel processing
@@ -36,24 +36,23 @@ for (cty in country_list) {
   for (wdw in c("rolling", "expanding")) {
     print(wdw)
 
+    # set estimation window
+    windown <- (wdw == "rolling")
 
-      # set estimation window
-      windown <- (wdw == "rolling")
+    # Adjustments for cross validation
+    cv_control <- trainControl(
+      method = "timeslice",
+      initialWindow = 120,
+      horizon = 1,
+      fixedWindow = windown,
+      allowParallel = TRUE,
+      savePredictions = TRUE,
+      seeds = seeds,
+      returnResamp = "all"
+    )
 
-      # Adjustments for cross validation
-      cv_control <- trainControl(
-        method = "timeslice",
-        initialWindow = 120,
-        horizon = 1,
-        fixedWindow = windown,
-        allowParallel = TRUE,
-        savePredictions = TRUE,
-        seeds = seeds,
-        returnResamp = "all"
-      )
-
-      for (hzn in c("h1", "h12")) {
-        print(hzn)
+    for (hzn in c("h1", "h12")) {
+      print(hzn)
 
       # set train formula
       {
@@ -125,7 +124,7 @@ for (cty in country_list) {
         # print("lasso")
         # model_lasso <- train(train_formula,
         #  data = data,
-        #  method = "lasso",
+        # method = "lasso",
         #  tuneLength = n_tuneLength,
         #  trControl = cv_control,
         #  metric = "RMSE"
@@ -179,8 +178,10 @@ for (cty in country_list) {
 
         loop <- paste0(cty, "_", wdw, "_", hzn, "_", form)
         output_models[[loop]] <- list(
-          "lm" = model_lm, "ridge" = model_ridge, "lasso" = model_lasso, "svm_r" = model_svm_r,
-          "svm_l" = model_svm_l, "ctree" = model_tree, "mars" = model_mars
+          "lm" = model_lm,
+          # "ridge" = model_ridge, "lasso" = model_lasso,
+          "svm_r" = model_svm_r, "svm_l" = model_svm_l,
+          "ctree" = model_tree, "mars" = model_mars
         )
       }
     }
@@ -188,4 +189,4 @@ for (cty in country_list) {
 }
 
 # export trained models
-saveRDS(output_models, "outputs/output_models.rds")
+#saveRDS(output_models, "outputs/output_models.rds")

@@ -93,7 +93,7 @@ output_gap_m <- function(data, colname = "br_gap") {
 }
 
 # disaggregate data from lower frequency to higher (quarterly to monthly)
-quartet_to_monthly <- function(data_gdp, data_ip, filtro = "BR", colname="br_gdp", gdp_ano_0, gdp_quarter_0, ip_ano_0, ip_mes_0) {
+quartet_to_monthly <- function(data_gdp, data_ip, filtro = "BR", colname = "br_gdp", gdp_ano_0, gdp_quarter_0, ip_ano_0, ip_mes_0) {
   gdp <- data_gdp %>%
     filter(ref_area == filtro) %>%
     select(c(date, value))
@@ -112,21 +112,47 @@ quartet_to_monthly <- function(data_gdp, data_ip, filtro = "BR", colname="br_gdp
   plot <- ggplot() +
     geom_line(gdp_monthly, mapping = aes(x = date, y = value, color = "monthly")) +
     geom_line(gdp, mapping = aes(x = date, y = value, color = "quartely")) +
-    #tidyquant::coord_x_date(xlim = c("2018-01-01", max(gdp$date)))+
+    # tidyquant::coord_x_date(xlim = c("2018-01-01", max(gdp$date)))+
     scale_color_manual(name = "", values = c("monthly" = "blue", "quartely" = "red")) +
     labs(title = filtro)
 
-  #colnames(gdp_monthly) <- c("date", colname)
+  # colnames(gdp_monthly) <- c("date", colname)
 
   print(plot)
   return(gdp_monthly)
 }
 
 # filter IFS exchage rate panel by country
-filter_ifs <- function(data, filter = "BR", colname = "br_exchange"){
-  x <- filter(data, ref_area == filter) %>% select(c(date,value))
+filter_ifs <- function(data, filter = "BR", colname = "br_exchange") {
+  x <- filter(data, ref_area == filter) %>% select(c(date, value))
   x$date <- lubridate::ym(x$date)
   x$value <- as.double(x$value)
   colnames(x) <- c("date", colname)
   return(x)
+}
+
+# Get RMSE from random walk
+rmse_rw <- function(cty) {
+  data <- read_csv2(paste0("outputs/", cty, "_panel_data.csv"), col_types = "Dddddddddddd") %>% arrange(date)
+
+  rw <- data[, c(1, 3, 4)] %>%
+    `colnames<-`(c("data", "var_h1", "var_h12")) %>%
+    mutate(
+      rw1 = lag(var_h1, 1),
+      rw12 = lag(var_h12, 12)
+    ) %>%
+    slice_tail(n = -120) %>%
+    mutate(
+      se1 = (rw1 - var_h1)**2,
+      se12 = (rw12 - var_h12)**2
+    )
+
+  rmse_rw_h1 <- rw$se1 %>%
+    mean() %>%
+    sqrt()
+  rmse_rw_h12 <- rw$se12 %>%
+    mean() %>%
+    sqrt()
+
+  return(c(rmse_rw_h1, rmse_rw_h12))
 }

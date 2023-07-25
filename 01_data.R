@@ -34,35 +34,39 @@ a <- br_exchange %>% mutate(
   lead1 = lead(br_exchange, 1),
   var1 = (lead(br_exchange, 1) / br_exchange) - 1
 )
+b <- br_exchange %>% mutate(
+  lag1 = lag(br_exchange, 1),
+  var1 = (br_exchange / lag(br_exchange, 1)) - 1
+)
 
 br_exchange_rate <- br_exchange %>%
   mutate(
-    br_exchange_rate_h1 = lead(br_exchange, 1) / br_exchange - 1,
-    br_exchange_rate_h12 = lead(br_exchange, 12) / br_exchange - 1
+    br_exchange_rate_h1 = br_exchange / lag(br_exchange, 1) - 1,
+    br_exchange_rate_h12 = br_exchange / lag(br_exchange, 12) - 1
   ) %>%
   select(-br_exchange)
 ru_exchange_rate <- ru_exchange %>%
   mutate(
-    ru_exchange_rate_h1 = lead(ru_exchange, 1) / ru_exchange - 1,
-    ru_exchange_rate_h12 = lead(ru_exchange, 12) / ru_exchange - 1
+    ru_exchange_rate_h1 = ru_exchange / lag(ru_exchange, 1) - 1,
+    ru_exchange_rate_h12 = ru_exchange / lag(ru_exchange, 12) - 1
   ) %>%
   select(-ru_exchange)
 in_exchange_rate <- in_exchange %>%
   mutate(
-    in_exchange_rate_h1 = lead(in_exchange, 1) / in_exchange - 1,
-    in_exchange_rate_h12 = lead(in_exchange, 12) / in_exchange - 1
+    in_exchange_rate_h1 = in_exchange / lag(in_exchange, 1) - 1,
+    in_exchange_rate_h12 = in_exchange / lag(in_exchange, 12) - 1
   ) %>%
   select(-in_exchange)
 cn_exchange_rate <- cn_exchange %>%
   mutate(
-    cn_exchange_rate_h1 = lead(cn_exchange, 1) / cn_exchange - 1,
-    cn_exchange_rate_h12 = lead(cn_exchange, 12) / cn_exchange - 1
+    cn_exchange_rate_h1 = cn_exchange / lag(cn_exchange, 1) - 1,
+    cn_exchange_rate_h12 = cn_exchange / lag(cn_exchange, 12) - 1
   ) %>%
   select(-cn_exchange)
 za_exchange_rate <- za_exchange %>%
   mutate(
-    za_exchange_rate_h1 = lead(za_exchange, 1) / za_exchange - 1,
-    za_exchange_rate_h12 = lead(za_exchange, 12) / za_exchange - 1
+    za_exchange_rate_h1 = za_exchange / lag(za_exchange, 1) - 1,
+    za_exchange_rate_h12 = za_exchange / lag(za_exchange, 12) - 1
   ) %>%
   select(-za_exchange)
 

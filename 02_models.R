@@ -9,6 +9,10 @@
 source("00_functions.R")
 # source("01_data.R")
 
+# _________________________________________________________________________________
+# ________________________________ COUNTRY LOOP ___________________________________
+# _________________________________________________________________________________
+
 country_list <- c("br", "ru", "in", "cn", "za")
 # country_list <- c("br")
 
@@ -33,6 +37,10 @@ for (cty in country_list) {
   # set the number of alternativa to metaparameters
   n_tuneLength <- 15
 
+  # _________________________________________________________________________________
+  # ________________________________ WINDOW LOOP ____________________________________
+  # _________________________________________________________________________________
+
   for (wdw in c("rolling", "expanding")) {
     print(wdw)
 
@@ -50,6 +58,10 @@ for (cty in country_list) {
       seeds = seeds,
       returnResamp = "all"
     )
+
+    # _________________________________________________________________________________
+    # ________________________________ HORIZON LOOP ___________________________________
+    # _________________________________________________________________________________
 
     for (hzn in c("h1", "h12")) {
       print(hzn)
@@ -94,6 +106,10 @@ for (cty in country_list) {
         "form_taylor", "form_taylor_ppp", "form_taylor_ppp_smoothing",
         "form_taylor_smoothing", "form_ppp", "form_monetary", "form_foward_premium"
       )
+
+      # _________________________________________________________________________________
+      # ___________________________ FORMULA LOOP AND TRAIN_______________________________
+      # _________________________________________________________________________________
 
       for (form in formula_list) {
         print(form)
@@ -189,4 +205,4 @@ for (cty in country_list) {
 }
 
 # export trained models
-#saveRDS(output_models, "outputs/output_models.rds")
+saveRDS(output_models, "outputs/output_models.rds")

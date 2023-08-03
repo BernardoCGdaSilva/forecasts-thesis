@@ -36,102 +36,112 @@ rmse_svm_r <- list()
 rmse_svm_l <- list()
 rmse_mars <- list()
 rmse_ctree <- list()
+dm_lm <- list()
+dm_svm_r <- list()
+dm_svm_l <- list()
+dm_mars <- list()
+dm_ctree <- list()
 country_list <- c("br", "ru", "in", "cn", "za")
 model_list <- c("taylor", "taylor_ppp", "taylor_ppp_smoothing", "taylor_smoothing", "ppp", "monetary", "foward_premium")
 window_list <- c("rolling", "expanding")
 h_list <- c("h1", "h12")
 
-# Linear models
+
 for (cty in country_list) {
   for (wdw in window_list) {
     for (h in h_list) {
       for (mdl in model_list) {
+
+        # Linear models
+
+        # Set up for Diebold-Mariano test
+        h_num <- ifelse(h == "h1", 1, 12)
+        e1_dm <- get(paste0(cty, "_rmse_rw"))[[paste0("error_rw_", h)]]
+        e2_dm_lm <- (models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "pred"] -
+          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "obs"])**2
+
+        # Get RMSe
         rmse_lm[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_lm")]] <- c(RMSE(
           pred = models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "pred"],
           obs = models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "obs"]
         ), cty, h)
-      }
-    }
-  }
-}
 
-# SVM radial
-for (cty in country_list) {
-  for (wdw in window_list) {
-    for (h in h_list) {
-      for (mdl in model_list) {
-        var <- filter(
+        # Get DM test
+        dm_lm[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_lm")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = e2_dm_lm, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
+        )
+
+        # SVM radial
+
+        var_svm_r <- filter(
           models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_r"]]$pred,
           sigma == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_r"]]$bestTune[[1]] &
             C == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_r"]]$bestTune[[2]]
-        )
+        ) %>% mutate(error = (pred - obs)**2)
 
         rmse_svm_r[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_svm_r")]] <- c(RMSE(
-          pred = var$pred,
-          obs = var$obs
+          pred = var_svm_r$pred,
+          obs = var_svm_r$obs
         ), cty, h)
-      }
-    }
-  }
-}
 
-# SVM linear
-for (cty in country_list) {
-  for (wdw in window_list) {
-    for (h in h_list) {
-      for (mdl in model_list) {
-        var <- filter(
-          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_l"]]$pred,
-          C == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_l"]]$bestTune[[1]]
+        dm_svm_r[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_svm_r")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = var_svm_r$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
         )
 
-        rmse_svm_l[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_svm_l")]] <- c(RMSE(
-          pred = var$pred,
-          obs = var$obs
-        ), cty, h)
-      }
-    }
-  }
-}
+        # SVM linear
 
-# MARS
-for (cty in country_list) {
-  for (wdw in window_list) {
-    for (h in h_list) {
-      for (mdl in model_list) {
-        var <- filter(
+        var_svm_l <- filter(
+          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_l"]]$pred,
+          C == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["svm_l"]]$bestTune[[1]]
+        ) %>% mutate(error = (pred - obs)**2)
+
+        rmse_svm_l[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_svm_l")]] <- c(RMSE(
+          pred = var_svm_l$pred,
+          obs = var_svm_l$obs
+        ), cty, h)
+
+        dm_svm_l[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_svm_l")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = var_svm_l$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
+        )
+
+        # MARS
+
+        var_mars <- filter(
           models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$pred,
           nprune == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[1]] &
             degree == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[2]]
-        )
+        ) %>% mutate(error = (pred - obs)**2)
 
         rmse_mars[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- c(RMSE(
-          pred = var$pred,
-          obs = var$obs
+          pred = var_mars$pred,
+          obs = var_mars$obs
         ), cty, h)
-      }
-    }
-  }
-}
 
-# CTree
-for (cty in country_list) {
-  for (wdw in window_list) {
-    for (h in h_list) {
-      for (mdl in model_list) {
-        var <- filter(
-          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["ctree"]]$pred,
-          mincriterion == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["ctree"]]$bestTune[[1]]
+        dm_mars[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = var_mars$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
         )
 
+        # CTree
+
+        var_ctree <- filter(
+          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["ctree"]]$pred,
+          mincriterion == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["ctree"]]$bestTune[[1]]
+        ) %>% mutate(error = (pred - obs)**2)
+
         rmse_ctree[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_ctree")]] <- c(RMSE(
-          pred = var$pred,
-          obs = var$obs
+          pred = var_ctree$pred,
+          obs = var_ctree$obs
         ), cty, h)
+
+        dm_ctree[[paste0("rmse_", cty, "_", wdw, "_", h, "_", mdl, "_ctree")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = var_ctree$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
+        )
       }
     }
   }
 }
+
+
 
 # ___________________________________________________________________________________
 # _________________________________ RELATIVE RMSE ___________________________________
@@ -162,9 +172,32 @@ for (mtd in method_list) {
     ))
 }
 
+# ___________________________________________________________________________________
+# _________________________________ DIEBOLD MARIANO TEST ____________________________
+# ___________________________________________________________________________________
+
+f1 <- forecast::ets(WWWusage)
+f2 <- forecast::auto.arima(WWWusage)
+forecast::accuracy(f1)
+forecast::accuracy(f2)
+residuals(f1) %>% str()
+residuals(models$br_rolling_h1_form_taylor$lm)
+models$br_rolling_h1_form_taylor$lm$pred
+
+forecast::dm.test(residuals(f1), residuals(f2), h = 1)
+forecast::dm.test(residuals(models$br_rolling_h1_form_taylor$lm), residuals(f2), h = 1)
+
+?multDM::DM.test
+library(multDM)
+data(MDMforecasts)
+ts <- MDMforecasts$ts
+forecasts <- MDMforecasts$forecasts
+DM.test(f1 = forecasts[, 1], f2 = forecasts[, 2], y = ts, loss = "SE", h = 1, c = FALSE, H1 = "same")
+
+forecast::dm.test(e1 = br_rmse_rw$error_rw_h1, e2 = var$error, h = 1, power = 2)
 
 
-
+forecast::dm.test(e1 = get(paste0(cty, "_rmse_rw"))[[paste0("error_rw_", h)]], e2 = var$error, h = 1, power = 2)
 
 
 
@@ -177,35 +210,36 @@ rw_unificado <- bind_rows(
   "cn" = cn_rmse_rw,
   "za" = za_rmse_rw
 ) %>%
-  `rownames<-`(c("h1", "h12"))%>% rownames_to_column("horizonte")
+  `rownames<-`(c("h1", "h12")) %>%
+  rownames_to_column("horizonte")
 rmse_br <- bind_rows(
   filter(relative_rmse_lm, country == "br"),
   filter(relative_rmse_mars, country == "br"),
   filter(relative_rmse_svm_l, country == "br"),
   filter(relative_rmse_svm_r, country == "br"),
   filter(relative_rmse_ctree, country == "br")
-)%>% rownames_to_column("especificação")
+) %>% rownames_to_column("especificação")
 rmse_ru <- bind_rows(
   filter(relative_rmse_lm, country == "ru"),
   filter(relative_rmse_mars, country == "ru"),
   filter(relative_rmse_svm_l, country == "ru"),
   filter(relative_rmse_svm_r, country == "ru"),
   filter(relative_rmse_ctree, country == "ru")
-)%>% rownames_to_column("especificação")
+) %>% rownames_to_column("especificação")
 rmse_in <- bind_rows(
   filter(relative_rmse_lm, country == "in"),
   filter(relative_rmse_mars, country == "in"),
   filter(relative_rmse_svm_l, country == "in"),
   filter(relative_rmse_svm_r, country == "in"),
   filter(relative_rmse_ctree, country == "in")
-)%>% rownames_to_column("especificação")
+) %>% rownames_to_column("especificação")
 rmse_cn <- bind_rows(
   filter(relative_rmse_lm, country == "cn"),
   filter(relative_rmse_mars, country == "cn"),
   filter(relative_rmse_svm_l, country == "cn"),
   filter(relative_rmse_svm_r, country == "cn"),
   filter(relative_rmse_ctree, country == "cn")
-)%>% rownames_to_column("especificação")
+) %>% rownames_to_column("especificação")
 rmse_za <- bind_rows(
   filter(relative_rmse_lm, country == "za"),
   filter(relative_rmse_mars, country == "za"),

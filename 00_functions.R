@@ -137,22 +137,39 @@ rmse_rw <- function(cty) {
 
   rw <- data[, c(1, 3, 4)] %>%
     `colnames<-`(c("data", "var_h1", "var_h12")) %>%
-    mutate(
-      rw1 = lag(var_h1, 1),
-      rw12 = lag(var_h12, 12)
-    ) %>%
-    slice_tail(n = -120) %>%
-    mutate(
-      se1 = (rw1 - var_h1)**2,
-      se12 = (rw12 - var_h12)**2
-    )
+    # mutate(
+    #  rw1 = lag(var_h1, 1),
+    #  rw12 = lag(var_h12, 12)
+    # ) %>%
+    slice_tail(n = -120) # %>%
+  # mutate(
+  #  se1 = (rw1)**2,
+  #  se12 = (rw12)**2
+  # )
 
-  rmse_rw_h1 <- rw$se1 %>%
+  # rmse_rw_h1 <- rw$se1 %>%
+  #  mean() %>%
+  #  sqrt()
+  # rmse_rw_h12 <- rw$se12 %>%
+  #  mean() %>%
+  #  sqrt()
+
+  # rmse_rw_h1 <- RMSE(pred = rw$rw1, obs = rw$var_h1)
+  # rmse_rw_h12 <- RMSE(pred = rw$rw12, obs = rw$var_h12)
+
+  error_rw_h1 <- rw$var_h1**2
+  error_rw_h12 <- rw$var_h12**2
+
+  rmse_rw_h1 <- error_rw_h1 %>%
     mean() %>%
     sqrt()
-  rmse_rw_h12 <- rw$se12 %>%
+  rmse_rw_h12 <- error_rw_h12 %>%
     mean() %>%
     sqrt()
 
-  return(c(rmse_rw_h1, rmse_rw_h12))
+  return(list(
+    "rmse_rw" = c(rmse_rw_h1, rmse_rw_h12),
+    "error_rw_h1" = error_rw_h1,
+    "error_rw_h12" = error_rw_h12
+  ))
 }

@@ -6,4 +6,5 @@ fred_key.txt
 02_models_old.R
 03_verifica rmse.R
 02_passeio aleatório.R
-outputs
+01_hiato do produto.R
+outputs/output_models.rds

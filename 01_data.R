@@ -30,43 +30,48 @@ in_exchange <- filter_ifs(nominal_exchange, filter = "IN", colname = "in_exchang
 cn_exchange <- filter_ifs(nominal_exchange, filter = "CN", colname = "cn_exchange")
 za_exchange <- filter_ifs(nominal_exchange, filter = "ZA", colname = "za_exchange")
 
-a <- br_exchange %>% mutate(
-  lead1 = lead(br_exchange, 1),
-  var1 = (lead(br_exchange, 1) / br_exchange) - 1
-)
-b <- br_exchange %>% mutate(
-  lag1 = lag(br_exchange, 1),
-  var1 = (br_exchange / lag(br_exchange, 1)) - 1
-)
+# a <- br_exchange %>% mutate(
+#  lead1 = lead(br_exchange, 1),
+#  var1 = (lead(br_exchange, 1) / br_exchange) - 1
+# )
+# b <- br_exchange %>% mutate(
+#  lag1 = lag(br_exchange, 1),
+#  var1 = (br_exchange / lag(br_exchange, 1)) - 1
+# )
+# c <- br_exchange %>% mutate(
+#  log1 = log(br_exchange),
+#  loglead = lead(log(br_exchange),1),
+#  var1 = lead(log(br_exchange),1) - log(br_exchange)
+#    )
 
 br_exchange_rate <- br_exchange %>%
   mutate(
-    br_exchange_rate_h1 = br_exchange / lag(br_exchange, 1) - 1,
-    br_exchange_rate_h12 = br_exchange / lag(br_exchange, 12) - 1
+    br_exchange_rate_h1 = lead(log(br_exchange), 1) - log(br_exchange),
+    br_exchange_rate_h12 = lead(log(br_exchange), 12) - log(br_exchange)
   ) %>%
   select(-br_exchange)
 ru_exchange_rate <- ru_exchange %>%
   mutate(
-    ru_exchange_rate_h1 = ru_exchange / lag(ru_exchange, 1) - 1,
-    ru_exchange_rate_h12 = ru_exchange / lag(ru_exchange, 12) - 1
+    ru_exchange_rate_h1 = lead(log(ru_exchange), 1) - log(ru_exchange),
+    ru_exchange_rate_h12 = lead(log(ru_exchange), 12) - log(ru_exchange)
   ) %>%
   select(-ru_exchange)
 in_exchange_rate <- in_exchange %>%
   mutate(
-    in_exchange_rate_h1 = in_exchange / lag(in_exchange, 1) - 1,
-    in_exchange_rate_h12 = in_exchange / lag(in_exchange, 12) - 1
+    in_exchange_rate_h1 = lead(log(in_exchange), 1) - log(in_exchange),
+    in_exchange_rate_h12 = lead(log(in_exchange), 12) - log(in_exchange)
   ) %>%
   select(-in_exchange)
 cn_exchange_rate <- cn_exchange %>%
   mutate(
-    cn_exchange_rate_h1 = cn_exchange / lag(cn_exchange, 1) - 1,
-    cn_exchange_rate_h12 = cn_exchange / lag(cn_exchange, 12) - 1
+    cn_exchange_rate_h1 = lead(log(cn_exchange), 1) - log(cn_exchange),
+    cn_exchange_rate_h12 = lead(log(cn_exchange), 12) - log(cn_exchange)
   ) %>%
   select(-cn_exchange)
 za_exchange_rate <- za_exchange %>%
   mutate(
-    za_exchange_rate_h1 = za_exchange / lag(za_exchange, 1) - 1,
-    za_exchange_rate_h12 = za_exchange / lag(za_exchange, 12) - 1
+    za_exchange_rate_h1 = lead(log(za_exchange), 1) - log(za_exchange),
+    za_exchange_rate_h12 = lead(log(za_exchange), 12) - log(za_exchange)
   ) %>%
   select(-za_exchange)
 
@@ -242,7 +247,15 @@ cn_gap <- output_gap_m(data = cn_gdp, colname = "cn_gap")
 za_gap <- output_gap_m(data = za_gdp, colname = "za_gap")
 us_gap <- output_gap_m(data = us_gdp, colname = "us_gap")
 
-# Rename colnames of gdp here because if done before would break de functions
+# VIX
+
+vix <- fredr(series_id = "VIXCLS") %>%
+  select(1, 3) %>%
+  dplyr::mutate(date = lubridate::floor_date(date, "month")) %>%
+  group_by(date) %>%
+  summarise(vix = dplyr::last(value))
+
+# Rename colnames of gdp here because if done before would break the functions
 colnames(br_gdp) <- c("date", "br_gdp")
 colnames(ru_gdp) <- c("date", "ru_gdp")
 colnames(in_gdp) <- c("date", "in_gdp")
@@ -262,11 +275,31 @@ panel_data <- reduce(
     in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_interest, in_m1, in_inflation_rate,
     cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1, cn_inflation_rate,
     za_exchange, za_exchange_rate, za_gap, za_gdp, za_inflation, za_interest, za_m1, za_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    br_interest_lag = dplyr::lag(br_interest, 1),
+    ru_interest_lag = dplyr::lag(ru_interest, 1),
+    in_interest_lag = dplyr::lag(in_interest, 1),
+    cn_interest_lag = dplyr::lag(cn_interest, 1),
+    za_interest_lag = dplyr::lag(za_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    us_inflation_log = log(us_inflation),
+    br_exchange_log = log(br_exchange),
+    br_inflation_log = log(br_inflation),
+    ru_exchange_log = log(ru_exchange),
+    ru_inflation_log = log(ru_inflation),
+    in_exchange_log = log(in_exchange),
+    in_inflation_log = log(in_inflation),
+    cn_exchange_log = log(cn_exchange),
+    cn_inflation_log = log(cn_inflation),
+    za_exchange_log = log(za_exchange),
+    za_inflation_log = log(za_inflation)
+  ) %>%
+  arrange(date)
 panel_data <- panel_data[rowSums(is.na(panel_data)) == 0, ]
 rownames(panel_data) <- seq(length = nrow(panel_data))
 
@@ -274,11 +307,19 @@ rownames(panel_data) <- seq(length = nrow(panel_data))
 br_panel_data <- reduce(
   list(
     br_exchange, br_exchange_rate, br_gap, br_gdp, br_inflation, br_interest, br_m1, br_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    br_interest_lag = dplyr::lag(br_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    br_exchange_log = log(br_exchange),
+    br_inflation_log = log(br_inflation),
+    us_inflation_log = log(us_inflation)
+  ) %>%
+  arrange(date)
 br_panel_data <- br_panel_data[rowSums(is.na(br_panel_data)) == 0, ]
 rownames(br_panel_data) <- seq(length = nrow(br_panel_data))
 
@@ -286,11 +327,19 @@ rownames(br_panel_data) <- seq(length = nrow(br_panel_data))
 ru_panel_data <- reduce(
   list(
     ru_exchange, ru_exchange_rate, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1, ru_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    ru_interest_lag = dplyr::lag(ru_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    ru_exchange_log = log(ru_exchange),
+    ru_inflation_log = log(ru_inflation),
+    us_inflation_log = log(us_inflation)
+  ) %>%
+  arrange(date)
 ru_panel_data <- ru_panel_data[rowSums(is.na(ru_panel_data)) == 0, ]
 rownames(ru_panel_data) <- seq(length = nrow(ru_panel_data))
 
@@ -298,11 +347,19 @@ rownames(ru_panel_data) <- seq(length = nrow(ru_panel_data))
 in_panel_data <- reduce(
   list(
     in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_interest, in_m1, in_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    in_interest_lag = dplyr::lag(in_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    in_exchange_log = log(in_exchange),
+    in_inflation_log = log(in_inflation),
+    us_inflation_log = log(us_inflation)
+  ) %>%
+  arrange(date)
 in_panel_data <- in_panel_data[rowSums(is.na(in_panel_data)) == 0, ]
 rownames(in_panel_data) <- seq(length = nrow(in_panel_data))
 
@@ -310,11 +367,19 @@ rownames(in_panel_data) <- seq(length = nrow(in_panel_data))
 cn_panel_data <- reduce(
   list(
     cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1, cn_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    cn_interest_lag = dplyr::lag(cn_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    cn_exchange_log = log(cn_exchange),
+    cn_inflation_log = log(cn_inflation),
+    us_inflation_log = log(us_inflation)
+  ) %>%
+  arrange(date)
 cn_panel_data <- cn_panel_data[rowSums(is.na(cn_panel_data)) == 0, ]
 rownames(cn_panel_data) <- seq(length = nrow(cn_panel_data))
 
@@ -322,11 +387,19 @@ rownames(cn_panel_data) <- seq(length = nrow(cn_panel_data))
 za_panel_data <- reduce(
   list(
     za_exchange, za_exchange_rate, za_gap, za_gdp, za_inflation, za_interest, za_m1, za_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate
+    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
   ),
   full_join,
   by = "date"
-)
+) %>%
+  mutate(
+    za_interest_lag = dplyr::lag(za_interest, 1),
+    us_interest_lag = dplyr::lag(us_interest, 1),
+    za_exchange_log = log(za_exchange),
+    za_inflation_log = log(za_inflation),
+    us_inflation_log = log(us_inflation)
+  ) %>%
+  arrange(date)
 za_panel_data <- za_panel_data[rowSums(is.na(za_panel_data)) == 0, ]
 rownames(za_panel_data) <- seq(length = nrow(za_panel_data))
 

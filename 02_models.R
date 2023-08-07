@@ -2,6 +2,7 @@
 # Bernardo Cainelli Gomes da Silva
 # Fev - 2023
 
+t0 <- Sys.time()
 # _________________________________________________________________________________
 # _____________________________ HELPER FUNCTIONS __________________________________
 # _________________________________________________________________________________
@@ -28,11 +29,11 @@ for (cty in country_list) {
   set.seed(123)
   seed_lenght <- nrow(data) - 120
   seeds <- vector(mode = "list", length = seed_lenght)
-  for (i in 1:seed_lenght) seeds[[i]] <- sample.int(1000, 15)
+  for (i in 1:seed_lenght) seeds[[i]] <- sample.int(1000, 675)
   seeds[[seed_lenght + 1]] <- sample.int(1000, 1)
 
   # set number o cores for parallel processing
-  registerDoParallel(cores = 4)
+  registerDoParallel(cores = 8)
 
   # set the number of alternativa to metaparameters
   n_tuneLength <- 15
@@ -42,7 +43,7 @@ for (cty in country_list) {
   # _________________________________________________________________________________
 
   for (wdw in c("rolling", "expanding")) {
-    print(wdw)
+    print(paste0(cty, "_", wdw))
 
     # set estimation window
     windown <- (wdw == "rolling")
@@ -60,18 +61,18 @@ for (cty in country_list) {
     )
 
     # _________________________________________________________________________________
-    # ________________________________ HORIZON LOOP ___________________________________
+    # ____________________ HORIZON LOOP AND MODELS (FORMULAS) _________________________
     # _________________________________________________________________________________
 
     for (hzn in c("h1", "h12")) {
-      print(hzn)
+      print(paste0(cty, "_", wdw, "_", hzn))
 
       # set train formula
       {
         # taylor
         form_taylor <- paste0(
           cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
-          "_gap - us_gap) + I(log(", cty, "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
+          "_gap - us_gap) + I(", cty, "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
         )
         # taylor ppp
         form_taylor_ppp <- paste0(
@@ -80,46 +81,57 @@ for (cty in country_list) {
         # taylor ppp smoothing
         form_taylor_ppp_smoothing <- paste0(
           cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
-          "_gap - us_gap) + I(", cty, "_interest - us_interest)"
+          "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag)"
         )
         # taylor smoothing
         form_taylor_smoothing <- paste0(
           cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
-          "_gap - us_gap) + I(", cty, "_interest - us_interest) + I(log(", cty,
-          "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
+          "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag) + I(", cty,
+          "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
         )
         # ppp
         form_ppp <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(log(", cty, "_exchange) + log(us_inflation) - log(", cty, "_inflation))"
-        )
-        # monetary
-        form_monetary <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(log(", cty, "_exchange) -((", cty, "_m1 - us_m1)-(", cty, "_gdp - us_gdp)))"
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
         )
         # foward premium model
         form_foward_premium <- paste0(
           cty, "_exchange_rate_", hzn, " ~ I(", cty, "_interest - us_interest)"
         )
+        # monetary
+        form_monetary <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log -((", cty, "_m1 - us_m1)-(", cty, "_gdp - us_gdp)))"
+        )
+        # monetary with sticky prices
+        form_monetary_sticky <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1 - us_m1) + I(", cty, "_gdp - us_gdp) + I(", cty,
+          "_interest - us_interest) + I(", cty, "_inflation - us_inflation)"
+        )
+        # monetary with sticky prices augmented by risk
+        form_monetary_risk <- paste0(
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1 - us_m1) + I(", cty, "_gdp - us_gdp) + I(", cty,
+          "_interest - us_interest) + I(", cty, "_inflation - us_inflation) + I(vix)"
+        )
       }
 
       formula_list <- list(
         "form_taylor", "form_taylor_ppp", "form_taylor_ppp_smoothing",
-        "form_taylor_smoothing", "form_ppp", "form_monetary", "form_foward_premium"
+        "form_taylor_smoothing", "form_ppp", "form_foward_premium", "form_monetary",
+        "form_monetary_sticky", "form_monetary_risk"
       )
 
       # _________________________________________________________________________________
-      # ___________________________ FORMULA LOOP AND TRAIN_______________________________
+      # ___________________________ FORMULA LOOP AND METHODS ____________________________
       # _________________________________________________________________________________
 
       for (form in formula_list) {
-        print(form)
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form))
 
         train_formula <- as.formula(get(form))
 
         # View(model.matrix(data = data, as.formula(train_formula)))
         # View(model.frame(data = data, as.formula(train_formula)))
 
-        print("lm")
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_lm"))
         model_lm <- train(train_formula,
           data = data,
           method = "lm",
@@ -128,7 +140,7 @@ for (cty in country_list) {
           metric = "RMSE"
         )
 
-        # print("ridge")
+        # print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_ridge"))
         # model_ridge <- train(train_formula,
         #  data = data,
         #  method = "ridge",
@@ -137,16 +149,16 @@ for (cty in country_list) {
         #  metric = "RMSE"
         # )
 
-        # print("lasso")
-        # model_lasso <- train(train_formula,
-        #  data = data,
-        # method = "lasso",
-        #  tuneLength = n_tuneLength,
-        #  trControl = cv_control,
-        #  metric = "RMSE"
-        # )
+        #  print("lasso")
+        #  model_lasso <- train(train_formula,
+        #    data = data,
+        #    method = "lasso",
+        #    tuneLength = n_tuneLength,
+        #    trControl = cv_control,
+        #    metric = "RMSE"
+        #  )
 
-        print("svm_r")
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_svm_r"))
         model_svm_r <- train(train_formula,
           data = data,
           method = "svmRadial",
@@ -155,7 +167,7 @@ for (cty in country_list) {
           metric = "RMSE"
         )
 
-        print("svm_l")
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_svm_l"))
         model_svm_l <- train(train_formula,
           data = data,
           method = "svmLinear",
@@ -164,40 +176,75 @@ for (cty in country_list) {
           metric = "RMSE"
         )
 
-        print("tree")
+        # print("svm_p")
+        # model_svm_p <- train(train_formula,
+        #  data = data,
+        #  method = "svmPoly",
+        #  trControl = cv_control,
+        #  tuneLength = n_tuneLength,
+        #  metric = "RMSE"
+        # )
+
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_tree"))
         model_tree <- train(train_formula,
           data = data,
-          method = "ctree",
+          method = "rpart",
           tuneLength = n_tuneLength,
           trControl = cv_control,
           metric = "RMSE"
         )
 
-        print("mars")
+        # print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_ctree"))
+        # model_conditional_tree <- train(train_formula,
+        #  data = data,
+        #  method = "ctree",
+        #  tuneLength = n_tuneLength,
+        #  trControl = cv_control,
+        #  metric = "RMSE"
+        # )
+
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_mars"))
         model_mars <- train(train_formula,
           data = data,
           method = "earth",
+          # tuneLength = n_tuneLength,
           tuneGrid = expand.grid(
-            .degree = 1, # Preciso entender o que são esses dois parâmetros e porque eles não podem ser estimados com CV
+            .degree = 1,
             .nprune = 2:25
           ),
           trControl = cv_control
         )
 
-        # model_rf <- train(train_formula,
-        # data = data,
-        # method = "rf",
-        # tuneLength = n_tuneLength,
-        # trControl = cv_control,
-        # metric = "RMSE"
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_forest"))
+        model_rf <- train(train_formula,
+          data = data,
+          method = "rf",
+          tuneLength = n_tuneLength,
+          trControl = cv_control,
+          ntrees = 1000,
+          metric = "RMSE"
+        )
+
+        # print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_cforest"))
+        # model_conditional_rf <- train(train_formula,
+        #  data = data,
+        #  method = "cforest",
+        #  tuneLength = n_tuneLength,
+        #  trControl = cv_control,
+        #  metric = "RMSE"
         # )
 
         loop <- paste0(cty, "_", wdw, "_", hzn, "_", form)
         output_models[[loop]] <- list(
           "lm" = model_lm,
-          # "ridge" = model_ridge, "lasso" = model_lasso,
-          "svm_r" = model_svm_r, "svm_l" = model_svm_l,
-          "ctree" = model_tree, "mars" = model_mars
+          # "ridge" = model_ridge,
+          # "lasso" = model_lasso,
+          "svm_r" = model_svm_r,
+          "svm_l" = model_svm_l,
+          # "ctree" = model_tree,
+          "mars" = model_mars,
+          "tree" = model_tree,
+          "forest" = model_rf
         )
       }
     }
@@ -206,3 +253,6 @@ for (cty in country_list) {
 
 # export trained models
 saveRDS(output_models, "outputs/output_models.rds")
+
+tf <- Sys.time()
+tf - t0

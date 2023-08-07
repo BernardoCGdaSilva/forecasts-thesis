@@ -1,10 +1,4 @@
 .Rproj.user
-01_data_old.R
 forecasts-thesis.Rproj
-Programa.txt
 fred_key.txt
-02_models_old.R
-03_verifica rmse.R
-02_passeio aleatório.R
-01_hiato do produto.R
 outputs/output_models.rds

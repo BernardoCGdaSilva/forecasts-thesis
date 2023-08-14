@@ -80,12 +80,12 @@ for (cty in country_list) {
         )
         # taylor ppp smoothing
         form_taylor_ppp_smoothing <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
           "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag)"
         )
         # taylor smoothing
         form_taylor_smoothing <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation - us_inflation) + I(", cty,
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
           "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag) + I(", cty,
           "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
         )
@@ -99,17 +99,17 @@ for (cty in country_list) {
         )
         # monetary
         form_monetary <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log -((", cty, "_m1 - us_m1)-(", cty, "_gdp - us_gdp)))"
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log -((", cty, "_m1_log - us_m1_log)-(", cty, "_gdp_log - us_gdp_log)))"
         )
         # monetary with sticky prices
         form_monetary_sticky <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1 - us_m1) + I(", cty, "_gdp - us_gdp) + I(", cty,
-          "_interest - us_interest) + I(", cty, "_inflation - us_inflation)"
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1_log - us_m1_log) + I(", cty, "_gdp_log - us_gdp_log) + I(", cty,
+          "_interest - us_interest) + I(", cty, "_inflation_rate - us_inflation_rate)"
         )
         # monetary with sticky prices augmented by risk
         form_monetary_risk <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1 - us_m1) + I(", cty, "_gdp - us_gdp) + I(", cty,
-          "_interest - us_interest) + I(", cty, "_inflation - us_inflation) + I(vix)"
+          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1_log - us_m1_log) + I(", cty, "_gdp_log - us_gdp_log) + I(", cty,
+          "_interest - us_interest) + I(", cty, "_inflation_rate - us_inflation_rate) + I(vix)"
         )
       }
 

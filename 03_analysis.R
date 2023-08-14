@@ -64,11 +64,11 @@ for (cty in country_list) {
         e2_dm_lm <- (models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "pred"] -
           models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "obs"])**2
 
-        # Get RMSe
+        # Get RMSE
         rmse_lm[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_lm")]] <- c(RMSE(
           pred = models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "pred"],
           obs = models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["lm"]]$pred[, "obs"]
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "lm")
 
         # Get DM test
         dm_lm[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_lm")]] <- forecast::dm.test(
@@ -86,7 +86,7 @@ for (cty in country_list) {
         rmse_svm_r[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_svm_r")]] <- c(RMSE(
           pred = var_svm_r$pred,
           obs = var_svm_r$obs
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "svm_r")
 
         dm_svm_r[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_svm_r")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_svm_r$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
@@ -102,7 +102,7 @@ for (cty in country_list) {
         rmse_svm_l[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_svm_l")]] <- c(RMSE(
           pred = var_svm_l$pred,
           obs = var_svm_l$obs
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "svm_l")
 
         dm_svm_l[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_svm_l")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_svm_l$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
@@ -119,7 +119,7 @@ for (cty in country_list) {
         rmse_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- c(RMSE(
           pred = var_mars$pred,
           obs = var_mars$obs
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "mars")
 
         dm_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_mars$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
@@ -135,7 +135,7 @@ for (cty in country_list) {
         rmse_tree[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_tree")]] <- c(RMSE(
           pred = var_tree$pred,
           obs = var_tree$obs
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "tree")
 
         dm_tree[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_tree")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_tree$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
@@ -151,7 +151,7 @@ for (cty in country_list) {
         rmse_forest[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_forest")]] <- c(RMSE(
           pred = var_forest$pred,
           obs = var_forest$obs
-        ), cty, h, wdw, mdl)
+        ), cty, h, wdw, mdl, "forest")
 
         dm_forest[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_forest")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_forest$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
@@ -174,7 +174,7 @@ for (rmse in rmse_list) {
   assign(x = paste0("relative_", rmse), value = get(rmse) %>%
     as.data.frame() %>%
     t() %>%
-    as.data.frame() %>% `colnames<-`(c("rmse", "country", "horizon", "window", "model")) %>%
+    as.data.frame() %>% `colnames<-`(c("rmse", "country", "horizon", "window", "model", "method")) %>%
     mutate(
       rmse = as.double(rmse),
       relative_rmse = case_when(

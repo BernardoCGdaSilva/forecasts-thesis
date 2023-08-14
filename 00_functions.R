@@ -83,7 +83,7 @@ output_gap_q <- function(data, filtro = "BR", colname = "br_gap") {
 
 # Calculate output gap via Hamilton Filter, monthly data
 output_gap_m <- function(data, colname = "br_gap") {
-  hf <- neverhpfilter::yth_filter(xts::as.xts(data), h = 24, p = 12)
+  hf <- neverhpfilter::yth_filter(xts::as.xts(data[,1:2]), h = 24, p = 12)
   gap <- data$value / hf$value.trend
   gap <- as.data.frame(gap) %>%
     rownames_to_column() %>%

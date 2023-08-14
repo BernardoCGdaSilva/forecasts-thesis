@@ -130,19 +130,29 @@ us_inflation_rate <- us_inflation %>%
 # M1, NSA
 br_m1 <- fredr(series_id = "MANMM101BRM189N") %>% select(1, 3)
 colnames(br_m1) <- c("date", "br_m1")
+br_m1 <- mutate(br_m1, br_m1_log = log(br_m1))
+
 ru_m1 <- fredr(series_id = "MANMM101RUM189N") %>% select(1, 3)
 colnames(ru_m1) <- c("date", "ru_m1")
+ru_m1 <- mutate(ru_m1, ru_m1_log = log(ru_m1))
+
 in_m1 <- fredr(series_id = "MANMM101INM189N") %>% select(1, 3)
 colnames(in_m1) <- c("date", "in_m1")
+in_m1 <- mutate(in_m1, in_m1_log = log(in_m1))
+
 cn_m1 <- fredr(series_id = "MANMM101CNM189N") %>% select(1, 3)
 colnames(cn_m1) <- c("date", "cn_m1")
+cn_m1 <- mutate(cn_m1, cn_m1_log = log(cn_m1))
+
 za_m1 <- fredr(series_id = "MANMM101ZAM189N") %>% select(1, 3)
 colnames(za_m1) <- c("date", "za_m1")
+za_m1 <- mutate(za_m1, za_m1_log = log(za_m1))
+
 us_m1 <- fredr(series_id = "MANMM101USM189N") %>% select(1, 3)
 colnames(us_m1) <- c("date", "us_m1")
+us_m1 <- mutate(us_m1, us_m1_log = log(us_m1))
 
 # Industrial production: GDP proxy, monthly, NSA
-
 br_ip <- fredr(series_id = "BRAPRMNTO01IXOBM") %>% select(1, 3)
 ru_ip <- fredr(series_id = "RUSPRMNTO01IXOBM") %>% select(1, 3)
 # ru_ip <- fredr(series_id = "RUSPRINTO01IXOBM") %>% select(1, 3)
@@ -181,7 +191,7 @@ br_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 1,
   ip_ano_0 = 1975,
   ip_mes_0 = 1
-)
+) %>% mutate(gdp_log = log(value))
 
 ru_gdp <- quartet_to_monthly(
   data_gdp = nominal_gdp,
@@ -192,7 +202,7 @@ ru_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 1,
   ip_ano_0 = 1999,
   ip_mes_0 = 1
-)
+) %>% mutate(gdp_log = log(value))
 
 in_gdp <- quartet_to_monthly(
   data_gdp = nominal_gdp,
@@ -203,7 +213,7 @@ in_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 2,
   ip_ano_0 = 1994,
   ip_mes_0 = 4
-)
+) %>% mutate(gdp_log = log(value))
 
 cn_gdp <- quartet_to_monthly(
   data_gdp = nominal_gdp,
@@ -214,7 +224,7 @@ cn_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 1,
   ip_ano_0 = 1999,
   ip_mes_0 = 1
-)
+) %>% mutate(gdp_log = log(value))
 
 za_gdp <- quartet_to_monthly(
   data_gdp = nominal_gdp,
@@ -225,7 +235,7 @@ za_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 1,
   ip_ano_0 = 1990,
   ip_mes_0 = 1
-)
+) %>% mutate(gdp_log = log(value))
 
 us_gdp <- quartet_to_monthly(
   data_gdp = nominal_gdp,
@@ -236,7 +246,7 @@ us_gdp <- quartet_to_monthly(
   gdp_quarter_0 = 1,
   ip_ano_0 = 1960,
   ip_mes_0 = 1
-)
+) %>% mutate(gdp_log = log(value))
 
 # Output gap via Hamilton Filter from monthly series
 
@@ -256,12 +266,12 @@ vix <- fredr(series_id = "VIXCLS") %>%
   summarise(vix = dplyr::last(value))
 
 # Rename colnames of gdp here because if done before would break the functions
-colnames(br_gdp) <- c("date", "br_gdp")
-colnames(ru_gdp) <- c("date", "ru_gdp")
-colnames(in_gdp) <- c("date", "in_gdp")
-colnames(cn_gdp) <- c("date", "cn_gdp")
-colnames(za_gdp) <- c("date", "za_gdp")
-colnames(us_gdp) <- c("date", "us_gdp")
+colnames(br_gdp) <- c("date", "br_gdp", "br_gdp_log")
+colnames(ru_gdp) <- c("date", "ru_gdp", "ru_gdp_log")
+colnames(in_gdp) <- c("date", "in_gdp", "in_gdp_log")
+colnames(cn_gdp) <- c("date", "cn_gdp", "cn_gdp_log")
+colnames(za_gdp) <- c("date", "za_gdp", "za_gdp_log")
+colnames(us_gdp) <- c("date", "us_gdp", "us_gdp_log")
 
 # _____________________________________________________________________________
 # ______________________________ BUILD PANEL __________________________________
@@ -270,12 +280,12 @@ colnames(us_gdp) <- c("date", "us_gdp")
 # All the data
 panel_data <- reduce(
   list(
-    br_exchange, br_exchange_rate, br_gap, br_gdp, br_inflation, br_interest, br_m1, br_inflation_rate,
-    ru_exchange, ru_exchange_rate, ru_gap, ru_gdp, ru_inflation, ru_interest, ru_m1, ru_inflation_rate,
-    in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_interest, in_m1, in_inflation_rate,
-    cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_interest, cn_m1, cn_inflation_rate,
-    za_exchange, za_exchange_rate, za_gap, za_gdp, za_inflation, za_interest, za_m1, za_inflation_rate,
-    us_gap, us_gdp, us_inflation, us_interest, us_m1, us_inflation_rate, vix
+    br_exchange, br_exchange_rate, br_gap, br_gdp, br_inflation, br_inflation_rate, br_interest, br_m1,
+    ru_exchange, ru_exchange_rate, ru_gap, ru_gdp, ru_inflation, ru_inflation_rate, ru_interest, ru_m1,
+    in_exchange, in_exchange_rate, in_gap, in_gdp, in_inflation, in_inflation_rate, in_interest, in_m1,
+    cn_exchange, cn_exchange_rate, cn_gap, cn_gdp, cn_inflation, cn_inflation_rate, cn_interest, cn_m1,
+    za_exchange, za_exchange_rate, za_gap, za_gdp, za_inflation, za_inflation_rate, za_interest, za_m1,
+    us_gap, us_gdp, us_inflation, us_inflation_rate, us_interest, us_m1, vix
   ),
   full_join,
   by = "date"

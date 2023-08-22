@@ -327,7 +327,14 @@ br_panel_data <- reduce(
     us_interest_lag = dplyr::lag(us_interest, 1),
     br_exchange_log = log(br_exchange),
     br_inflation_log = log(br_inflation),
-    us_inflation_log = log(us_inflation)
+    us_inflation_log = log(us_inflation),
+    diff_inflation_rate = br_inflation_rate - us_inflation_rate,
+    diff_gap = br_gap - us_gap,
+    real_exchange_rate = br_exchange_log + us_inflation_log - br_inflation_log,
+    diff_interest_lag = br_interest_lag - us_interest_lag,
+    diff_interest = br_interest - us_interest,
+    diff_m1 = br_m1_log - us_m1_log,
+    diff_gdp = br_gdp_log - us_gdp_log
   ) %>%
   arrange(date)
 br_panel_data <- br_panel_data[rowSums(is.na(br_panel_data)) == 0, ]
@@ -347,7 +354,14 @@ ru_panel_data <- reduce(
     us_interest_lag = dplyr::lag(us_interest, 1),
     ru_exchange_log = log(ru_exchange),
     ru_inflation_log = log(ru_inflation),
-    us_inflation_log = log(us_inflation)
+    us_inflation_log = log(us_inflation),
+    diff_inflation_rate = ru_inflation_rate - us_inflation_rate,
+    diff_gap = ru_gap - us_gap,
+    real_exchange_rate = ru_exchange_log + us_inflation_log - ru_inflation_log,
+    diff_interest_lag = ru_interest_lag - us_interest_lag,
+    diff_interest = ru_interest - us_interest,
+    diff_m1 = ru_m1_log - us_m1_log,
+    diff_gdp = ru_gdp_log - us_gdp_log
   ) %>%
   arrange(date)
 ru_panel_data <- ru_panel_data[rowSums(is.na(ru_panel_data)) == 0, ]
@@ -367,7 +381,14 @@ in_panel_data <- reduce(
     us_interest_lag = dplyr::lag(us_interest, 1),
     in_exchange_log = log(in_exchange),
     in_inflation_log = log(in_inflation),
-    us_inflation_log = log(us_inflation)
+    us_inflation_log = log(us_inflation),
+    diff_inflation_rate = in_inflation_rate - us_inflation_rate,
+    diff_gap = in_gap - us_gap,
+    real_exchange_rate = in_exchange_log + us_inflation_log - in_inflation_log,
+    diff_interest_lag = in_interest_lag - us_interest_lag,
+    diff_interest = in_interest - us_interest,
+    diff_m1 = in_m1_log - us_m1_log,
+    diff_gdp = in_gdp_log - us_gdp_log
   ) %>%
   arrange(date)
 in_panel_data <- in_panel_data[rowSums(is.na(in_panel_data)) == 0, ]
@@ -387,7 +408,14 @@ cn_panel_data <- reduce(
     us_interest_lag = dplyr::lag(us_interest, 1),
     cn_exchange_log = log(cn_exchange),
     cn_inflation_log = log(cn_inflation),
-    us_inflation_log = log(us_inflation)
+    us_inflation_log = log(us_inflation),
+    diff_inflation_rate = cn_inflation_rate - us_inflation_rate,
+    diff_gap = cn_gap - us_gap,
+    real_exchange_rate = cn_exchange_log + us_inflation_log - cn_inflation_log,
+    diff_interest_lag = cn_interest_lag - us_interest_lag,
+    diff_interest = cn_interest - us_interest,
+    diff_m1 = cn_m1_log - us_m1_log,
+    diff_gdp = cn_gdp_log - us_gdp_log
   ) %>%
   arrange(date)
 cn_panel_data <- cn_panel_data[rowSums(is.na(cn_panel_data)) == 0, ]
@@ -407,7 +435,14 @@ za_panel_data <- reduce(
     us_interest_lag = dplyr::lag(us_interest, 1),
     za_exchange_log = log(za_exchange),
     za_inflation_log = log(za_inflation),
-    us_inflation_log = log(us_inflation)
+    us_inflation_log = log(us_inflation),
+    diff_inflation_rate = za_inflation_rate - us_inflation_rate,
+    diff_gap = za_gap - us_gap,
+    real_exchange_rate = za_exchange_log + us_inflation_log - za_inflation_log,
+    diff_interest_lag = za_interest_lag - us_interest_lag,
+    diff_interest = za_interest - us_interest,
+    diff_m1 = za_m1_log - us_m1_log,
+    diff_gdp = za_gdp_log - us_gdp_log
   ) %>%
   arrange(date)
 za_panel_data <- za_panel_data[rowSums(is.na(za_panel_data)) == 0, ]
@@ -420,3 +455,4 @@ write_csv2(ru_panel_data, "outputs/ru_panel_data.csv")
 write_csv2(in_panel_data, "outputs/in_panel_data.csv")
 write_csv2(cn_panel_data, "outputs/cn_panel_data.csv")
 write_csv2(za_panel_data, "outputs/za_panel_data.csv")
+

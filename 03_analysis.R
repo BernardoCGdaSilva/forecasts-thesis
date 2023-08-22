@@ -34,15 +34,17 @@ za_rmse_rw <- rmse_rw("za")
 rmse_lm <- list()
 rmse_svm_r <- list()
 rmse_svm_l <- list()
-rmse_mars <- list()
+#rmse_mars <- list()
 rmse_tree <- list()
 rmse_forest <- list()
+rmse_gam <- list()
 dm_lm <- list()
 dm_svm_r <- list()
 dm_svm_l <- list()
-dm_mars <- list()
+#dm_mars <- list()
 dm_tree <- list()
 dm_forest <- list()
+dm_gam <- list()
 country_list <- c("br", "ru", "in", "cn", "za")
 model_list <- c(
   "taylor", "taylor_ppp", "taylor_ppp_smoothing", "taylor_smoothing",
@@ -110,20 +112,20 @@ for (cty in country_list) {
 
         # MARS
 
-        var_mars <- filter(
-          models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$pred,
-          nprune == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[1]] &
-            degree == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[2]]
-        ) %>% mutate(error = (pred - obs)**2)
+        #var_mars <- filter(
+        #  models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$pred,
+        #  nprune == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[1]] &
+        #    degree == models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["mars"]]$bestTune[[2]]
+        #) %>% mutate(error = (pred - obs)**2)
 
-        rmse_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- c(RMSE(
-          pred = var_mars$pred,
-          obs = var_mars$obs
-        ), cty, h, wdw, mdl, "mars")
+        #rmse_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- c(RMSE(
+        #  pred = var_mars$pred,
+       #   obs = var_mars$obs
+       # ), cty, h, wdw, mdl, "mars")
 
-        dm_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- forecast::dm.test(
-          e1 = e1_dm, e2 = var_mars$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
-        )[["p.value"]]
+        #dm_mars[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_mars")]] <- forecast::dm.test(
+        #  e1 = e1_dm, e2 = var_mars$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
+        #)[["p.value"]]
 
         # Tree
 
@@ -156,6 +158,19 @@ for (cty in country_list) {
         dm_forest[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_forest")]] <- forecast::dm.test(
           e1 = e1_dm, e2 = var_forest$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
         )[["p.value"]]
+        
+        # GAM
+        
+        var_gam <-  models[[paste0(cty, "_", wdw, "_", h, "_form_", mdl)]][["gam"]]$pred %>% mutate(error = (pred - obs)**2)
+        
+        rmse_gam[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_gam")]] <- c(RMSE(
+          pred = var_gam$pred,
+          obs = var_gam$obs
+        ), cty, h, wdw, mdl, "gam")
+        
+        dm_gam[[paste0(cty, "_", wdw, "_", h, "_", mdl, "_gam")]] <- forecast::dm.test(
+          e1 = e1_dm, e2 = var_gam$error, h = h_num, power = 2, alternative = "greater", varestimator = "bartlett"
+        )[["p.value"]]
       }
     }
   }
@@ -167,7 +182,7 @@ for (cty in country_list) {
 # _________________________________ RELATIVE RMSE ___________________________________
 # ___________________________________________________________________________________
 
-rmse_list <- list("rmse_lm", "rmse_svm_r", "rmse_svm_l", "rmse_mars", "rmse_tree", "rmse_forest")
+rmse_list <- list("rmse_lm", "rmse_svm_r", "rmse_svm_l", "rmse_tree", "rmse_forest", "rmse_gam")
 
 for (rmse in rmse_list) {
   print(rmse)
@@ -196,7 +211,7 @@ for (rmse in rmse_list) {
 # _________________________________ DIEBOLD MARIANO TEST ____________________________
 # ___________________________________________________________________________________
 
-dm_list <- list("dm_lm", "dm_svm_r", "dm_svm_l", "dm_mars", "dm_tree", "dm_forest")
+dm_list <- list("dm_lm", "dm_svm_r", "dm_svm_l", "dm_tree", "dm_forest", "dm_gam")
 
 for (dm in dm_list) {
   print(dm)
@@ -214,9 +229,10 @@ for (dm in dm_list) {
 results_lm <- merge(relative_rmse_lm, table_dm_lm, by = 0)
 results_svm_l <- merge(relative_rmse_svm_l, table_dm_svm_l, by = 0)
 results_svm_r <- merge(relative_rmse_svm_r, table_dm_svm_r, by = 0)
-results_mars <- merge(relative_rmse_mars, table_dm_mars, by = 0)
+#results_mars <- merge(relative_rmse_mars, table_dm_mars, by = 0)
 results_tree <- merge(relative_rmse_tree, table_dm_tree, by = 0)
 results_forest <- merge(relative_rmse_forest, table_dm_forest, by = 0)
+results_gam <- merge(relative_rmse_gam, table_dm_gam, by = 0)
 
 
 rw_uni <- bind_rows(
@@ -232,49 +248,55 @@ results_br <- bind_rows(
   filter(results_lm, country == "br"),
   filter(results_svm_l, country == "br"),
   filter(results_svm_r, country == "br"),
-  filter(results_mars, country == "br"),
+  #filter(results_mars, country == "br"),
   filter(results_tree, country == "br"),
-  filter(results_forest, country == "br")
+  filter(results_forest, country == "br"),
+  filter(results_gam, country == "br"),
 )
 results_ru <- bind_rows(
   filter(results_lm, country == "ru"),
   filter(results_svm_l, country == "ru"),
   filter(results_svm_r, country == "ru"),
-  filter(results_mars, country == "ru"),
+  #filter(results_mars, country == "ru"),
   filter(results_tree, country == "ru"),
-  filter(results_forest, country == "ru")
+  filter(results_forest, country == "ru"),
+  filter(results_gam, country == "ru"),
 )
 results_in <- bind_rows(
   filter(results_lm, country == "in"),
   filter(results_svm_l, country == "in"),
   filter(results_svm_r, country == "in"),
-  filter(results_mars, country == "in"),
+  #filter(results_mars, country == "in"),
   filter(results_tree, country == "in"),
-  filter(results_forest, country == "in")
+  filter(results_forest, country == "in"),
+  filter(results_gam, country == "in"),
 )
 results_cn <- bind_rows(
   filter(results_lm, country == "cn"),
   filter(results_svm_l, country == "cn"),
   filter(results_svm_r, country == "cn"),
-  filter(results_mars, country == "cn"),
+  #filter(results_mars, country == "cn"),
   filter(results_tree, country == "cn"),
-  filter(results_forest, country == "cn")
+  filter(results_forest, country == "cn"),
+  filter(results_gam, country == "cn"),
 )
 results_za <- bind_rows(
   filter(results_lm, country == "za"),
   filter(results_svm_l, country == "za"),
   filter(results_svm_r, country == "za"),
-  filter(results_mars, country == "za"),
+  #filter(results_mars, country == "za"),
   filter(results_tree, country == "za"),
-  filter(results_forest, country == "za")
+  filter(results_forest, country == "za"),
+  filter(results_gam, country == "za"),
 )
 results_all <- bind_rows(
   results_lm,
   results_svm_l,
   results_svm_r,
-  results_mars,
+  #results_mars,
   results_tree,
-  results_forest
+  results_forest,
+  results_gam
 )
 
 writexl::write_xlsx(x = list(

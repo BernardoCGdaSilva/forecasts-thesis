@@ -71,45 +71,39 @@ for (cty in country_list) {
       {
         # taylor
         form_taylor <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
-          "_gap - us_gap) + I(", cty, "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
+          cty, "_exchange_rate_", hzn, " ~ diff_inflation_rate + diff_gap + real_exchange_rate"
         )
         # taylor ppp
         form_taylor_ppp <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty, "_gap - us_gap)"
+          cty, "_exchange_rate_", hzn, " ~ diff_inflation_rate + diff_gap"
         )
         # taylor ppp smoothing
         form_taylor_ppp_smoothing <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
-          "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag)"
+          cty, "_exchange_rate_", hzn, " ~ diff_inflation_rate + diff_gap + diff_interest_lag"
         )
         # taylor smoothing
         form_taylor_smoothing <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_inflation_rate - us_inflation_rate) + I(", cty,
-          "_gap - us_gap) + I(", cty, "_interest_lag - us_interest_lag) + I(", cty,
-          "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
+          cty, "_exchange_rate_", hzn, " ~ diff_inflation_rate + diff_gap + diff_interest_lag + real_exchange_rate"
         )
         # ppp
         form_ppp <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log + us_inflation_log - ", cty, "_inflation_log)"
+          cty, "_exchange_rate_", hzn, " ~ real_exchange_rate"
         )
         # foward premium model
         form_foward_premium <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_interest - us_interest)"
+          cty, "_exchange_rate_", hzn, " ~ diff_interest"
         )
         # monetary
         form_monetary <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_exchange_log -((", cty, "_m1_log - us_m1_log)-(", cty, "_gdp_log - us_gdp_log)))"
+          cty, "_exchange_rate_", hzn, " ~ diff_m1 + diff_gdp"
         )
         # monetary with sticky prices
         form_monetary_sticky <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1_log - us_m1_log) + I(", cty, "_gdp_log - us_gdp_log) + I(", cty,
-          "_interest - us_interest) + I(", cty, "_inflation_rate - us_inflation_rate)"
+          cty, "_exchange_rate_", hzn, " ~ diff_m1 + diff_gdp + diff_interest + diff_inflation_rate"
         )
         # monetary with sticky prices augmented by risk
         form_monetary_risk <- paste0(
-          cty, "_exchange_rate_", hzn, " ~ I(", cty, "_m1_log - us_m1_log) + I(", cty, "_gdp_log - us_gdp_log) + I(", cty,
-          "_interest - us_interest) + I(", cty, "_inflation_rate - us_inflation_rate) + I(vix)"
+          cty, "_exchange_rate_", hzn, " ~ diff_m1 + diff_gdp + diff_interest + diff_inflation_rate + vix"
         )
       }
 
@@ -203,17 +197,17 @@ for (cty in country_list) {
         #  metric = "RMSE"
         # )
 
-        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_mars"))
-        model_mars <- train(train_formula,
-          data = data,
-          method = "earth",
-          # tuneLength = n_tuneLength,
-          tuneGrid = expand.grid(
-            .degree = 1,
-            .nprune = 2:25
-          ),
-          trControl = cv_control
-        )
+        # print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_mars"))
+        # model_mars <- train(train_formula,
+        #  data = data,
+        #  method = "earth",
+        # tuneLength = n_tuneLength,
+        #  tuneGrid = expand.grid(
+        #    .degree = 1,
+        #    .nprune = 2:25
+        #  ),
+        #  trControl = cv_control
+        # )
 
         print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_forest"))
         model_rf <- train(train_formula,
@@ -234,6 +228,19 @@ for (cty in country_list) {
         #  metric = "RMSE"
         # )
 
+        print(paste0(cty, "_", wdw, "_", hzn, "_", form, "_gam"))
+        model_gam <- train(train_formula,
+          data = data,
+          method = "gam",
+          # tuneLength = n_tuneLength,
+          tuneGrid = data.frame(
+            select = F,
+            method = "GCV.Cp"
+          ),
+          trControl = cv_control,
+          metric = "RMSE"
+        )
+
         loop <- paste0(cty, "_", wdw, "_", hzn, "_", form)
         output_models[[loop]] <- list(
           "lm" = model_lm,
@@ -242,9 +249,10 @@ for (cty in country_list) {
           "svm_r" = model_svm_r,
           "svm_l" = model_svm_l,
           # "ctree" = model_tree,
-          "mars" = model_mars,
+          # "mars" = model_mars,
           "tree" = model_tree,
-          "forest" = model_rf
+          "forest" = model_rf,
+          "gam" = model_gam
         )
       }
     }

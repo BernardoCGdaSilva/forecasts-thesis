@@ -2,3 +2,14 @@
 forecasts-thesis.Rproj
 fred_key.txt
 outputs/output_models.rds
+outputs/output_models_v1.rds
+outputs/output_models_v2.rds
+outputs/output_models_V3.rds
+plots.R
+teste splines.R
+outputs/Plot_spline.png
+outputs/Plot_tree.png
+outputs/Resultados e análise log data 2.xlsx
+outputs/Resultados e análise log data gam 3.xlsx
+outputs/Resultados e análise.xlsx
+outputs/Resultados e análise log data.xlsx
